@@ -1,0 +1,227 @@
+{
+  "created_at": "2026-07-13T16:54:56.581056+00:00",
+  "method": "rule-based ranking against station/month train baselines",
+  "interpretation": "Hypotheses are plausible contributing conditions, not formal source apportionment or proven causality.",
+  "training_split": "train only",
+  "event_definition": {
+    "pm25_current_gte": 100.0,
+    "pm25_rolling_24h_gte": 75.0
+  },
+  "baseline": {
+    "groups": [
+      "station_id",
+      "month"
+    ],
+    "features": [
+      "pm25",
+      "pm10",
+      "co",
+      "no2",
+      "so2",
+      "o3",
+      "temperature",
+      "humidity",
+      "wind_speed",
+      "precipitation",
+      "pm25_to_pm10_ratio"
+    ],
+    "minimum_hypothesis_score": 0.35,
+    "rows": 96
+  },
+  "data_availability": {
+    "historical_traffic": false,
+    "chemical_speciation": false,
+    "emission_inventory": false,
+    "back_trajectory": false,
+    "pollutants_and_weather": true
+  },
+  "limitations": [
+    "Các điểm Hà Nội dùng ước lượng CAMS, không phải phép đo hóa học tại trạm mặt đất.",
+    "Không có dữ liệu thành phần ion, carbon hay kim loại để làm source apportionment.",
+    "Không có kiểm kê phát thải hoặc quỹ đạo khối khí/back-trajectory trong pipeline.",
+    "TomTom chỉ có snapshot hiện tại, không đủ để quy nguồn giao thông cho lịch sử.",
+    "Điểm giả thuyết biểu thị độ mạnh bằng chứng, không phải xác suất nhân quả."
+  ],
+  "events": {
+    "total": 33887,
+    "by_split": {
+      "validation": 14524,
+      "train": 13485,
+      "test": 5878
+    },
+    "evidence_strength": {
+      "moderate": 18529,
+      "high": 8406,
+      "low": 6952
+    }
+  },
+  "hypothesis_distribution": [
+    {
+      "top_hypothesis": "regional_accumulation",
+      "top_hypothesis_vi": "Tích tụ trên diện rộng",
+      "events": 13612,
+      "percent": 40.1687962935639
+    },
+    {
+      "top_hypothesis": "combustion_traffic_proxy",
+      "top_hypothesis_vi": "Tín hiệu đốt cháy/giao thông",
+      "events": 8651,
+      "percent": 25.52896390946381
+    },
+    {
+      "top_hypothesis": "photochemical_conditions",
+      "top_hypothesis_vi": "Điều kiện quang hóa",
+      "events": 6430,
+      "percent": 18.974828105173074
+    },
+    {
+      "top_hypothesis": "secondary_aerosol_conditions",
+      "top_hypothesis_vi": "Điều kiện hình thành aerosol thứ cấp",
+      "events": 2175,
+      "percent": 6.418390533242836
+    },
+    {
+      "top_hypothesis": "unresolved",
+      "top_hypothesis_vi": "Chưa đủ bằng chứng",
+      "events": 1714,
+      "percent": 5.0579868386106765
+    },
+    {
+      "top_hypothesis": "atmospheric_stagnation",
+      "top_hypothesis_vi": "Khí quyển ít khuếch tán",
+      "events": 1003,
+      "percent": 2.9598371056747426
+    },
+    {
+      "top_hypothesis": "coarse_dust_resuspension",
+      "top_hypothesis_vi": "Bụi thô hoặc tái huyền phù",
+      "events": 302,
+      "percent": 0.8911972142709593
+    }
+  ],
+  "hypothesis_by_split": [
+    {
+      "split": "test",
+      "top_hypothesis": "atmospheric_stagnation",
+      "events": 214
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "coarse_dust_resuspension",
+      "events": 1
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "combustion_traffic_proxy",
+      "events": 1334
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "photochemical_conditions",
+      "events": 1326
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "regional_accumulation",
+      "events": 2319
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "secondary_aerosol_conditions",
+      "events": 488
+    },
+    {
+      "split": "test",
+      "top_hypothesis": "unresolved",
+      "events": 196
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "atmospheric_stagnation",
+      "events": 555
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "coarse_dust_resuspension",
+      "events": 266
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "combustion_traffic_proxy",
+      "events": 3084
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "photochemical_conditions",
+      "events": 2602
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "regional_accumulation",
+      "events": 5582
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "secondary_aerosol_conditions",
+      "events": 205
+    },
+    {
+      "split": "train",
+      "top_hypothesis": "unresolved",
+      "events": 1191
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "atmospheric_stagnation",
+      "events": 234
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "coarse_dust_resuspension",
+      "events": 35
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "combustion_traffic_proxy",
+      "events": 4233
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "photochemical_conditions",
+      "events": 2502
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "regional_accumulation",
+      "events": 5711
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "secondary_aerosol_conditions",
+      "events": 1482
+    },
+    {
+      "split": "validation",
+      "top_hypothesis": "unresolved",
+      "events": 327
+    }
+  ],
+  "cause_labels": {
+    "regional_accumulation": "Tích tụ trên diện rộng",
+    "atmospheric_stagnation": "Khí quyển ít khuếch tán",
+    "combustion_traffic_proxy": "Tín hiệu đốt cháy/giao thông",
+    "secondary_aerosol_conditions": "Điều kiện hình thành aerosol thứ cấp",
+    "coarse_dust_resuspension": "Bụi thô hoặc tái huyền phù",
+    "photochemical_conditions": "Điều kiện quang hóa",
+    "unresolved": "Chưa đủ bằng chứng"
+  },
+  "references": [
+    "https://digitalcommons.unl.edu/usepapapers/109/",
+    "https://www.sciencedirect.com/science/article/abs/pii/S1352231002002959",
+    "https://www.sciencedirect.com/science/article/abs/pii/S0021850220302019"
+  ],
+  "artifacts": {
+    "profile": "artifacts\\models\\cause_analyzer.joblib",
+    "analysis": "data\\processed\\pollution_cause_analysis.csv.gz"
+  }
+}

@@ -1,0 +1,38 @@
+.env
+.env.production
+.env.*.local
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.agents/
+.codex/
+tmp/
+output/
+*.db
+*.sqlite
+*.sqlite3
+Thumbs.db
+.DS_Store
+
+# Generated datasets. Keep the directory .gitkeep files and regenerate data
+# through the collection, cleaning and feature-engineering scripts.
+data/raw/*.csv
+data/raw/*.csv.gz
+data/processed/*.csv
+data/processed/*.csv.gz
+data/processed/splits/
+
+# Runtime and generated reports.
+artifacts/*.log
+artifacts/logs/
+artifacts/run/
+artifacts/reports/
+artifacts/hourly_update_status.json
+deploy/aws/certs/*.pem
+deploy/aws/certs/*.crt
+deploy/aws/certs/*.key
+backups/

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bảng điều khiển giám sát chất lượng không khí Hà Nội">
+  <title>Environment AI · Chất lượng không khí Hà Nội</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <script defer src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}"></script>
+  <script defer src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Environment AI">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 20c5-1 6-10 18-10-2 10-7 16-16 15 4-2 8-5 11-9-5 4-9 5-13 4Z"/></svg></span>
+        <span><strong>Environment AI</strong><small>Hanoi air intelligence</small></span>
+      </a>
+      <nav class="main-nav" aria-label="Điều hướng chính">
+        <a href="#overview">Tổng quan</a>
+        <a href="#forecast">Dự báo</a>
+        <a href="#map-section">Bản đồ</a>
+        <a href="#reports">Báo cáo</a>
+        <a href="/news">Tin môi trường</a>
+      </nav>
+      <div class="header-actions">
+        <label class="station-picker" for="station-select">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
+          <select id="station-select" aria-label="Chọn khu vực Hà Nội"></select>
+        </label>
+        <div class="system-state" id="system-state"><span class="state-dot"></span><span>Đang kết nối</span></div>
+        <button class="icon-button" id="refresh-button" type="button" aria-label="Làm mới dữ liệu" title="Làm mới">
+          <svg viewBox="0 0 24 24"><path d="M20 6v5h-5M4 18v-5h5M18.5 9a7 7 0 0 0-11.8-2.5L4 9m16 6-2.7 2.5A7 7 0 0 1 5.5 15"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="location-band" id="overview">
+      <div class="page-width">
+        <p class="breadcrumbs">Việt Nam <span>/</span> Hà Nội <span>/</span> <strong id="breadcrumb-station">Đang tải</strong></p>
+        <div class="location-heading">
+          <div>
+            <p class="eyebrow">GIÁM SÁT CHẤT LƯỢNG KHÔNG KHÍ</p>
+            <h1>Chất lượng không khí tại <span id="location-title">Hà Nội</span></h1>
+            <p id="station-caption">Đang tải thông tin khu vực…</p>
+          </div>
+          <div class="source-badge">
+            <span>Nguồn dữ liệu</span>
+            <strong id="data-source">—</strong>
+            <small>CAMS/Open-Meteo · ước lượng mô hình</small>
+            <small class="auto-update-caption" id="auto-update-status">Đang kiểm tra lịch cập nhật tự động…</small>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="page-width content-shell">
+      <section class="pm25-hero pm-unknown" id="aqi-card" aria-label="Chỉ số hiện tại PM2.5">
+        <div class="pm25-ambient" aria-hidden="true">
+          <div class="pm25-haze haze-one"></div>
+          <div class="pm25-haze haze-two"></div>
+          <div class="particle-layer">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+            <i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <svg class="hanoi-silhouette" viewBox="0 0 900 150" preserveAspectRatio="none">
+            <path d="M0 124h78V91h16v33h48V72h12v52h40V99h34v25h38V60h11v64h51V83h32v41h45V48h13v76h60V93h35v31h56V78h14v46h39V58h10v66h55V88h42v36h45V69h17v55h56V96h31v28h79v26H0z"/>
+            <path class="silhouette-roof" d="m348 83 28-20 28 20m182-5 26-19 25 19m-511 21 18-15 18 15"/>
+          </svg>
+        </div>
+
+        <div class="pm25-live-panel">
+          <div class="live-row">
+            <span class="live-pill"><i></i> Trực tiếp</span>
+            <span class="pm25-updated">Cập nhật <time id="latest-time">—</time></span>
+          </div>
+          <span class="hero-kicker">CHỈ SỐ HIỆN TẠI</span>
+          <h2>Vật chất hạt mịn <strong>PM₂.₅</strong></h2>
+          <div class="pm25-reading">
+            <strong id="current-pm25">—</strong>
+            <span>µg/m³</span>
+          </div>
+          <div class="pm25-status-line">
+            <span class="pm25-status-dot"></span>
+            <strong id="pm25-status">Đang tải dữ liệu</strong>
+          </div>
+          <div class="pm25-meta">
+            <div><span>AQI Mỹ</span><strong id="current-aqi">—</strong><small id="aqi-status">Đang tải</small></div>
+            <div><span>Nguồn</span><strong id="hero-data-source">—</strong><small>Quan trắc theo giờ</small></div>
+          </div>
+        </div>
+
+        <div class="pm25-visual" aria-hidden="true">
+          <div class="air-orbit orbit-one"></div>
+          <div class="air-orbit orbit-two"></div>
+          <div class="lung-orb">
+            <svg class="lung-illustration" viewBox="0 0 180 180">
+              <path class="airway" d="M90 20v48m0-2-25 22m25-22 25 22"/>
+              <path class="lung-shape lung-left" d="M82 65C61 51 43 63 34 83c-10 22-11 58 8 69 14 8 31-4 37-24 5-18 4-42 3-63Z"/>
+              <path class="lung-shape lung-right" d="M98 65c21-14 39-2 48 18 10 22 11 58-8 69-14 8-31-4-37-24-5-18-4-42-3-63Z"/>
+              <path class="lung-detail" d="M66 88c-8 12-11 27-10 43m58-43c8 12 11 27 10 43"/>
+            </svg>
+            <div class="orb-label"><span>PM</span><strong>2.5</strong></div>
+          </div>
+          <span class="floating-speck speck-one"></span>
+          <span class="floating-speck speck-two"></span>
+          <span class="floating-speck speck-three"></span>
+        </div>
+
+        <div class="pm25-insight-panel">
+          <div class="insight-heading">
+            <div><span>MỨC ĐỘ PM₂.₅</span><strong id="pm25-level-label">Đang đánh giá</strong></div>
+            <span class="screening-chip">Theo giờ · sàng lọc</span>
+          </div>
+          <p id="pm25-description">Đang đồng bộ dữ liệu PM2.5 mới nhất cho khu vực.</p>
+          <div class="pm25-scale" aria-label="Thang mức độ PM2.5">
+            <div class="scale-track">
+              <span class="scale-segment scale-good"></span>
+              <span class="scale-segment scale-moderate"></span>
+              <span class="scale-segment scale-watch"></span>
+              <span class="scale-segment scale-unhealthy"></span>
+              <span class="scale-segment scale-severe"></span>
+              <i class="scale-needle"><b></b></i>
+            </div>
+            <div class="scale-values"><span>0</span><span>15</span><span>35</span><span>55</span><span>75</span><span>150+</span></div>
+            <div class="scale-caption"><span>Tốt</span><span>Nghiêm trọng</span></div>
+          </div>
+          <div class="hero-weather-grid">
+            <div><span>☀</span><p>Nhiệt độ</p><strong><b id="current-temperature">—</b>°C</strong></div>
+            <div><span>↗</span><p>Gió</p><strong><b id="current-wind">—</b> km/h</strong></div>
+            <div><span>◒</span><p>Độ ẩm</p><strong><b id="current-humidity">—</b>%</strong></div>
+            <div><span>◉</span><p>Áp suất</p><strong><b id="current-pressure">—</b> hPa</strong></div>
+          </div>
+          <div class="hero-health-note">
+            <span aria-hidden="true">✦</span>
+            <div><strong id="health-message">Đang đánh giá chỉ số hiện tại…</strong><small>Khuyến nghị hỗ trợ theo dõi, không thay thế thông báo chính thức.</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="surface-card forecast-section" id="forecast">
+        <div class="section-heading">
+          <div><span class="section-kicker" id="forecast-source-label">ML · NỘI BỘ</span><h2>Dự báo ML của hệ thống</h2></div>
+          <div class="forecast-quick" aria-label="Dự báo nhanh">
+            <span>+1h <b id="forecast-1h">—</b></span>
+            <span>+3h <b id="forecast-3h">—</b></span>
+            <span>+6h <b id="forecast-6h">—</b></span>
+          </div>
+        </div>
+        <p class="section-note" id="forecast-note">Dự báo PM2.5 từ mô hình nội bộ, không sử dụng dự báo tương lai của nhà cung cấp.</p>
+        <div class="hourly-forecast" id="hourly-forecast" aria-label="Dự báo PM2.5 từ mô hình ML">
+          <div class="empty-state">Đang chạy dự báo ML…</div>
+        </div>
+      </section>
+
+      <section class="surface-card genai-card" id="forecast-explanation">
+        <div class="genai-heading">
+          <div class="genai-title">
+            <span class="genai-mark" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m12 2 1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2Zm7 12 .9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9L19 14Z"/></svg>
+            </span>
+            <div><span class="section-kicker">GENAI CÓ KIỂM SOÁT</span><h2>Giải thích dự báo ML</h2></div>
+          </div>
+          <div class="genai-controls">
+            <label for="explanation-horizon">Mốc dự báo</label>
+            <select id="explanation-horizon" aria-label="Chọn mốc dự báo để giải thích">
+              <option value="1">+1 giờ</option>
+              <option value="3" selected>+3 giờ</option>
+              <option value="6">+6 giờ</option>
+            </select>
+            <button class="primary-button" id="explain-button" type="button">Giải thích</button>
+          </div>
+        </div>
+        <p class="section-note">Groq GPT-OSS chỉ diễn đạt từ dự báo nội bộ, thời tiết và giao thông TomTom gần điểm lấy mẫu; hệ thống không cho phép khẳng định nguyên nhân hoặc gọi giá trị theo giờ là AQI chính thức.</p>
+        <div class="genai-output empty" id="genai-output" aria-live="polite">
+          <p>Chọn mốc thời gian rồi nhấn “Giải thích” để tạo nhận định có kiểm soát.</p>
+        </div>
+      </section>
+
+      <div class="main-layout">
+        <div class="main-column">
+          <section class="surface-card chart-card">
+            <div class="section-heading chart-heading">
+              <div><span class="section-kicker">24 GIỜ GẦN NHẤT</span><h2>Diễn biến PM2.5</h2></div>
+              <div class="chart-metrics" aria-label="Thống kê PM2.5 trong 24 giờ">
+                <div class="chart-extreme chart-minimum">
+                  <strong id="chart-minimum">—</strong>
+                  <div><span>↓ Thấp nhất</span><time id="chart-minimum-time">—</time></div>
+                </div>
+                <div class="chart-extreme chart-maximum">
+                  <strong id="chart-maximum">—</strong>
+                  <div><span>↑ Cao nhất</span><time id="chart-maximum-time">—</time></div>
+                </div>
+                <div class="chart-summary"><span>Trung bình</span><strong id="chart-average">—</strong></div>
+              </div>
+            </div>
+            <div class="chart-wrap" id="pm-chart" role="img" aria-label="Biểu đồ PM2.5 trong 24 giờ"><div class="empty-state">Đang tải chuỗi thời gian…</div></div>
+            <p class="chart-reference-note"><i></i>Mốc 15 µg/m³ là WHO AQG cho trung bình 24 giờ; các cột theo giờ chỉ dùng để theo dõi diễn biến.</p>
+          </section>
+
+          <section class="surface-card map-card" id="map-section">
+            <div class="section-heading">
+              <div><span class="section-kicker">8 ĐIỂM MẪU · TOÀN THÀNH PHỐ</span><h2>Bản đồ khu vực Hà Nội</h2></div>
+              <span class="live-chip"><i></i> PM2.5 live</span>
+            </div>
+            <div class="map-layout">
+              <div class="map-wrap">
+                <div id="station-map" role="application" aria-label="Bản đồ tương tác chất lượng không khí Hà Nội"></div>
+                <div class="map-color-legend" aria-label="Chú giải PM2.5">
+                  <span><i class="level-good"></i>0–15</span><span><i class="level-moderate"></i>15–35</span><span><i class="level-watch"></i>35–55</span><span><i class="level-unhealthy"></i>55–75</span><span><i class="level-severe"></i>&gt;75</span>
+                </div>
+              </div>
+              <aside class="station-ranking">
+                <div><span class="section-kicker">SO SÁNH KHU VỰC</span><h3>PM2.5 mới nhất</h3></div>
+                <div id="station-ranking"><div class="empty-state">Đang tải khu vực…</div></div>
+              </aside>
+            </div>
+            <p class="map-note">Nền bản đồ © OpenStreetMap contributors. Ranh giới: geoBoundaries gbOpen. Điểm hiển thị là vị trí lấy mẫu cấu hình, không phải trạm chính thức.</p>
+          </section>
+        </div>
+
+        <aside class="side-column">
+          <section class="surface-card pollutants-card">
+            <div class="section-heading"><div><span class="section-kicker">THÀNH PHẦN KHÔNG KHÍ</span><h2>Các chất ô nhiễm</h2></div></div>
+            <div class="pollutant-list">
+              <div><span>PM2.5</span><strong id="pollutant-pm25">—</strong><small>µg/m³</small></div>
+              <div><span>PM10</span><strong id="current-pm10">—</strong><small>µg/m³</small></div>
+              <div><span>O₃</span><strong id="current-o3">—</strong><small>µg/m³</small></div>
+              <div><span>NO₂</span><strong id="current-no2">—</strong><small>µg/m³</small></div>
+              <div><span>SO₂</span><strong id="current-so2">—</strong><small>µg/m³</small></div>
+              <div><span>CO</span><strong id="current-co">—</strong><small>µg/m³</small></div>
+            </div>
+          </section>
+
+          <section class="surface-card anomaly-card" id="anomaly-card">
+            <div class="anomaly-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 2.7 19h18.6L12 3Zm0 6v5m0 3h.01"/></svg></div>
+            <div><span class="section-kicker">PHÁT HIỆN BẤT THƯỜNG</span><h2 id="anomaly-status">Đang kiểm tra</h2><p id="anomaly-detail">Isolation Forest kết hợp luật ngưỡng</p></div>
+          </section>
+
+          <section class="surface-card alerts-card">
+            <div class="section-heading"><div><span class="section-kicker">TRUNG TÂM VẬN HÀNH</span><h2>Cảnh báo gần đây</h2></div><span class="count-badge" id="alert-count">0</span></div>
+            <div class="alert-list" id="alert-list"><div class="empty-state">Chưa có cảnh báo.</div></div>
+          </section>
+        </aside>
+      </div>
+
+      <section class="action-grid" id="reports">
+        <article class="report-card">
+          <div class="report-visual" aria-hidden="true"><svg viewBox="0 0 120 120"><path d="M30 16h43l17 18v70H30z"/><path d="M73 16v20h18M43 54h34M43 68h34M43 82h22"/></svg></div>
+          <div><span class="section-kicker">BÁO CÁO PDF TỰ ĐỘNG</span><h2>Tóm tắt chất lượng không khí 24 giờ</h2><p>Xuất file PDF tiếng Việt gồm diễn biến PM2.5, khí tượng, chất lượng và nguồn dữ liệu.</p></div>
+          <button class="secondary-button" id="report-button" type="button"><svg viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M5 20h14"/></svg><span>Tạo báo cáo PDF</span></button>
+        </article>
+      </section>
+    </div>
+  </main>
+
+  <footer><div class="page-width"><span>Environment AI · Decision support only</span><span>Dữ liệu cần được xác minh trước khi ra quyết định vận hành</span></div></footer>
+
+  <dialog id="report-dialog">
+    <div class="dialog-heading"><div><span class="section-kicker">BÁO CÁO ĐÃ TẠO</span><h2 id="report-title">Báo cáo 24 giờ</h2></div><button id="report-close" class="icon-button" aria-label="Đóng">×</button></div>
+    <div class="report-success" id="report-content"><span aria-hidden="true">PDF</span><div><strong>File PDF đã sẵn sàng</strong><p>Báo cáo gồm số liệu 24 giờ, biểu đồ PM2.5, nguồn và giới hạn sử dụng.</p></div></div>
+    <div class="dialog-actions"><span id="report-path"></span><a id="download-report" class="secondary-button" href="#" download>Tải PDF</a></div>
+  </dialog>
+
+  <div class="loading-layer hidden" id="loading-layer" aria-live="polite"><div class="loader"></div><span>Đang đồng bộ dữ liệu…</span></div>
+  <div class="toast hidden" id="toast" role="status"></div>
+</body>
+</html>

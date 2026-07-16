@@ -1,0 +1,127 @@
+{
+  "created_at": "2026-07-13T05:05:12.833934+00:00",
+  "standard": "WHO Global Air Quality Guidelines 2021",
+  "important_note": "WHO defines AQG and interim targets, not official good/moderate/bad AQI categories. Project labels are presentation labels. A rolling window does not by itself determine annual WHO compliance.",
+  "pollutant": "PM2.5",
+  "unit": "ug/m3",
+  "averaging_period": "rolling 24h",
+  "aqg_statistical_form": "annual 99th percentile of 24-hour means",
+  "annual_compliance_determined": false,
+  "timezone": "Asia/Ho_Chi_Minh",
+  "min_valid_hours": 18,
+  "who_thresholds": {
+    "AQG": 15.0,
+    "IT-4": 25.0,
+    "IT-3": 37.5,
+    "IT-2": 50.0,
+    "IT-1": 75.0
+  },
+  "levels": [
+    {
+      "level_code": 0,
+      "project_level": "guideline_met",
+      "project_label_vi": "Đạt khuyến nghị",
+      "who_band": "≤ AQG",
+      "who_band_vi": "Đạt mức AQG",
+      "upper_bound": 15.0,
+      "color": "#2e7d32"
+    },
+    {
+      "level_code": 1,
+      "project_level": "watch",
+      "project_label_vi": "Cần theo dõi",
+      "who_band": "AQG–IT-4",
+      "who_band_vi": "Vượt AQG, chưa vượt IT-4",
+      "upper_bound": 25.0,
+      "color": "#f9a825"
+    },
+    {
+      "level_code": 2,
+      "project_level": "elevated",
+      "project_label_vi": "Ô nhiễm mức 1",
+      "who_band": "IT-4–IT-3",
+      "who_band_vi": "Vượt IT-4, chưa vượt IT-3",
+      "upper_bound": 37.5,
+      "color": "#ef6c00"
+    },
+    {
+      "level_code": 3,
+      "project_level": "high",
+      "project_label_vi": "Ô nhiễm mức 2",
+      "who_band": "IT-3–IT-2",
+      "who_band_vi": "Vượt IT-3, chưa vượt IT-2",
+      "upper_bound": 50.0,
+      "color": "#d84315"
+    },
+    {
+      "level_code": 4,
+      "project_level": "very_high",
+      "project_label_vi": "Ô nhiễm mức 3",
+      "who_band": "IT-2–IT-1",
+      "who_band_vi": "Vượt IT-2, chưa vượt IT-1",
+      "upper_bound": 75.0,
+      "color": "#8e24aa"
+    },
+    {
+      "level_code": 5,
+      "project_level": "severe",
+      "project_label_vi": "Ô nhiễm nghiêm trọng",
+      "who_band": "> IT-1",
+      "who_band_vi": "Vượt IT-1",
+      "upper_bound": null,
+      "color": "#6d1b1b"
+    }
+  ],
+  "reference_url": "https://www.who.int/publications/i/item/9789240034228/",
+  "rows": {
+    "input": 267976,
+    "valid_assessment": 267840,
+    "insufficient_coverage": 136
+  },
+  "exceeds_aqg_percent": 98.03912783751494,
+  "distribution": [
+    {
+      "who_level_code": 0,
+      "who_band": "≤ AQG",
+      "project_label_vi": "Đạt khuyến nghị",
+      "rows": 5252,
+      "percent": 1.9608721624850656
+    },
+    {
+      "who_level_code": 1,
+      "who_band": "AQG–IT-4",
+      "project_label_vi": "Cần theo dõi",
+      "rows": 34151,
+      "percent": 12.750522700119474
+    },
+    {
+      "who_level_code": 2,
+      "who_band": "IT-4–IT-3",
+      "project_label_vi": "Ô nhiễm mức 1",
+      "rows": 70828,
+      "percent": 26.444145758661886
+    },
+    {
+      "who_level_code": 3,
+      "who_band": "IT-3–IT-2",
+      "project_label_vi": "Ô nhiễm mức 2",
+      "rows": 64879,
+      "percent": 24.223043608124254
+    },
+    {
+      "who_level_code": 4,
+      "who_band": "IT-2–IT-1",
+      "project_label_vi": "Ô nhiễm mức 3",
+      "rows": 65002,
+      "percent": 24.268966547192353
+    },
+    {
+      "who_level_code": 5,
+      "who_band": "> IT-1",
+      "project_label_vi": "Ô nhiễm nghiêm trọng",
+      "rows": 27728,
+      "percent": 10.352449223416965
+    }
+  ],
+  "output": "data\\processed\\pm25_who_levels.csv.gz"
+}

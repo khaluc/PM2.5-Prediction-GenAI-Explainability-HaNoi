@@ -1,0 +1,345 @@
+{
+  "created_at": "2026-07-13T05:13:21.302474+00:00",
+  "method": "threshold rules OR Isolation Forest",
+  "important_note": "No ground-truth anomaly labels are available; reported rates are detection diagnostics, not accuracy. Pollution episodes are kept separate from sensor/data anomalies.",
+  "training_split": "train only",
+  "feature_columns": [
+    "pm25",
+    "pm10",
+    "co",
+    "no2",
+    "so2",
+    "o3",
+    "temperature",
+    "humidity",
+    "wind_speed",
+    "precipitation",
+    "pm25_change_1h",
+    "pm25_change_3h",
+    "pm25_rolling_mean_24h",
+    "pm25_rolling_std_24h",
+    "stagnation_proxy",
+    "hour_sin",
+    "hour_cos"
+  ],
+  "feature_count": 17,
+  "isolation_forest": {
+    "n_estimators": 300,
+    "max_samples": 4096,
+    "contamination": 0.03,
+    "train_score_threshold": -0.4994170986118975,
+    "random_state": 42
+  },
+  "rules": {
+    "hard_ranges": {
+      "pm25": [
+        0,
+        1000
+      ],
+      "pm10": [
+        0,
+        1500
+      ],
+      "co": [
+        0,
+        60000
+      ],
+      "no2": [
+        0,
+        2000
+      ],
+      "so2": [
+        0,
+        2000
+      ],
+      "o3": [
+        0,
+        1000
+      ]
+    },
+    "pm25_jump_abs_1h": 75,
+    "pm25_jump_abs_3h": 100,
+    "flatline_std_24h": 0.2,
+    "flatline_min_mean": 5,
+    "pm25_pm10_ratio_max": 1.1,
+    "pm25_pm10_tolerance": 5,
+    "pm25_extreme": 200,
+    "pollution_episode_24h": 75
+  },
+  "split_summary": {
+    "train": {
+      "rows": 167704,
+      "rule_anomalies": 178,
+      "rule_rate_percent": 0.10613938844631016,
+      "isolation_anomalies": 5032,
+      "isolation_rate_percent": 3.00052473405524,
+      "combined_anomalies": 5096,
+      "combined_rate_percent": 3.038687210799981,
+      "pollution_episodes": 10731,
+      "pollution_episode_rate_percent": 6.398774030434576,
+      "requires_attention": 13468
+    },
+    "validation": {
+      "rows": 70032,
+      "rule_anomalies": 475,
+      "rule_rate_percent": 0.6782613662325794,
+      "isolation_anomalies": 6762,
+      "isolation_rate_percent": 9.655586017820426,
+      "combined_anomalies": 6873,
+      "combined_rate_percent": 9.814084989718985,
+      "pollution_episodes": 11770,
+      "pollution_episode_rate_percent": 16.806602695910442,
+      "requires_attention": 14064
+    },
+    "test": {
+      "rows": 28752,
+      "rule_anomalies": 72,
+      "rule_rate_percent": 0.25041736227045075,
+      "isolation_anomalies": 2235,
+      "isolation_rate_percent": 7.773372287145241,
+      "combined_anomalies": 2266,
+      "combined_rate_percent": 7.881190873678352,
+      "pollution_episodes": 5210,
+      "pollution_episode_rate_percent": 18.12047857540345,
+      "requires_attention": 5657
+    }
+  },
+  "rule_counts": {
+    "train": {
+      "rule_invalid_range": 0,
+      "rule_cleaning_spike": 135,
+      "rule_rapid_pm25_change": 41,
+      "rule_flatline": 0,
+      "rule_pm_inconsistency": 0,
+      "rule_extreme_pm25": 10
+    },
+    "validation": {
+      "rule_invalid_range": 0,
+      "rule_cleaning_spike": 292,
+      "rule_rapid_pm25_change": 113,
+      "rule_flatline": 0,
+      "rule_pm_inconsistency": 0,
+      "rule_extreme_pm25": 70
+    },
+    "test": {
+      "rule_invalid_range": 0,
+      "rule_cleaning_spike": 35,
+      "rule_rapid_pm25_change": 30,
+      "rule_flatline": 0,
+      "rule_pm_inconsistency": 0,
+      "rule_extreme_pm25": 8
+    }
+  },
+  "detection_source_counts": {
+    "none": 252253,
+    "isolation_forest": 13510,
+    "both": 519,
+    "rule": 206
+  },
+  "top_anomalies": [
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_BA_DINH",
+      "pm25": 203.0,
+      "pm10": 291.5,
+      "isolation_forest_score": -0.7153716192308046,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_DONG_DA",
+      "pm25": 203.0,
+      "pm10": 291.5,
+      "isolation_forest_score": -0.7153716192308046,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_HOAN_KIEM",
+      "pm25": 203.0,
+      "pm10": 291.5,
+      "isolation_forest_score": -0.7153716192308046,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_LONG_BIEN",
+      "pm25": 203.0,
+      "pm10": 291.5,
+      "isolation_forest_score": -0.7152308925935429,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_HAI_BA_TRUNG",
+      "pm25": 203.0,
+      "pm10": 291.5,
+      "isolation_forest_score": -0.7144517708961144,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_LONG_BIEN",
+      "pm25": 228.2,
+      "pm10": 234.7,
+      "isolation_forest_score": -0.7102025531123424,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_THANH_XUAN",
+      "pm25": 250.5,
+      "pm10": 257.0,
+      "isolation_forest_score": -0.6917036365998328,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T08:00:00+07:00",
+      "station_id": "HN_LONG_BIEN",
+      "pm25": 197.4,
+      "pm10": 284.1,
+      "isolation_forest_score": -0.6857195130829633,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_BA_DINH",
+      "pm25": 228.2,
+      "pm10": 234.7,
+      "isolation_forest_score": -0.6852282905120205,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_DONG_DA",
+      "pm25": 228.2,
+      "pm10": 234.7,
+      "isolation_forest_score": -0.6852282905120205,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_HAI_BA_TRUNG",
+      "pm25": 228.2,
+      "pm10": 234.7,
+      "isolation_forest_score": -0.6851238070587887,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_HOAN_KIEM",
+      "pm25": 228.2,
+      "pm10": 234.7,
+      "isolation_forest_score": -0.6850235626030511,
+      "detection_source": "both",
+      "anomaly_reason": "extreme_pm25;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T08:00:00+07:00",
+      "station_id": "HN_HAI_BA_TRUNG",
+      "pm25": 197.4,
+      "pm10": 284.1,
+      "isolation_forest_score": -0.6834028843463338,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-15T08:00:00+07:00",
+      "station_id": "HN_THANH_XUAN",
+      "pm25": 165.3,
+      "pm10": 179.7,
+      "isolation_forest_score": -0.6832161413330198,
+      "detection_source": "both",
+      "anomaly_reason": "rapid_pm25_change;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T08:00:00+07:00",
+      "station_id": "HN_BA_DINH",
+      "pm25": 197.4,
+      "pm10": 284.1,
+      "isolation_forest_score": -0.683003001490783,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T08:00:00+07:00",
+      "station_id": "HN_DONG_DA",
+      "pm25": 197.4,
+      "pm10": 284.1,
+      "isolation_forest_score": -0.683003001490783,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T08:00:00+07:00",
+      "station_id": "HN_HOAN_KIEM",
+      "pm25": 197.4,
+      "pm10": 284.1,
+      "isolation_forest_score": -0.683003001490783,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "test",
+      "timestamp": "2026-04-12T19:00:00+07:00",
+      "station_id": "HN_CAU_GIAY",
+      "pm25": 158.3,
+      "pm10": 179.7,
+      "isolation_forest_score": -0.6795688149411618,
+      "detection_source": "both",
+      "anomaly_reason": "rapid_pm25_change;multivariate_pattern"
+    },
+    {
+      "split": "train",
+      "timestamp": "2023-03-05T07:00:00+07:00",
+      "station_id": "HN_CAU_GIAY",
+      "pm25": 166.7,
+      "pm10": 240.3,
+      "isolation_forest_score": -0.6757184690360666,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    },
+    {
+      "split": "validation",
+      "timestamp": "2025-04-06T07:00:00+07:00",
+      "station_id": "HN_CAU_GIAY",
+      "pm25": 197.9,
+      "pm10": 204.4,
+      "isolation_forest_score": -0.6723692918245312,
+      "detection_source": "isolation_forest",
+      "anomaly_reason": "multivariate_pattern"
+    }
+  ],
+  "artifacts": {
+    "model": "artifacts\\models\\anomaly_detector.joblib",
+    "scores": "data\\processed\\anomaly_results.csv.gz"
+  }
+}

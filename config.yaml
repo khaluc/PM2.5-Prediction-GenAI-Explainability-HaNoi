@@ -1,0 +1,305 @@
+project:
+  name: environment_ai
+  timezone: Asia/Ho_Chi_Minh
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  timestamp_column: timestamp
+  target_column: pm25
+
+collection:
+  timezone: Asia/Ho_Chi_Minh
+  timeout_seconds: 30
+  # Keep enough observed history for 168-hour lag/rolling ML features.
+  past_hours: 192
+  # Request only the current provider timestep; future values are not persisted.
+  forecast_hours: 1
+  include_provider_forecast: false
+  air_quality_output: data/raw/air_quality.csv
+  weather_output: data/raw/weather.csv
+  traffic_output: data/raw/traffic.csv
+  locations:
+    - station_id: HN_HOAN_KIEM
+      name: Hoan Kiem
+      latitude: 21.0285
+      longitude: 105.8542
+    - station_id: HN_BA_DINH
+      name: Ba Dinh
+      latitude: 21.0358
+      longitude: 105.8342
+    - station_id: HN_CAU_GIAY
+      name: Cau Giay
+      latitude: 21.0333
+      longitude: 105.7900
+    - station_id: HN_DONG_DA
+      name: Dong Da
+      latitude: 21.0180
+      longitude: 105.8290
+    - station_id: HN_HAI_BA_TRUNG
+      name: Hai Ba Trung
+      latitude: 21.0060
+      longitude: 105.8570
+    - station_id: HN_THANH_XUAN
+      name: Thanh Xuan
+      latitude: 20.9930
+      longitude: 105.8110
+    - station_id: HN_LONG_BIEN
+      name: Long Bien
+      latitude: 21.0395
+      longitude: 105.8910
+    - station_id: HN_HA_DONG
+      name: Ha Dong
+      latitude: 20.9710
+      longitude: 105.7790
+  traffic:
+    enabled: true
+    max_locations: 8
+    zoom: 10
+
+historical_collection:
+  frequency: hourly
+  requested_start_date: 2022-01-01
+  end_date: 2026-05-30
+  air_quality_available_from: 2022-08-01
+  chunk_months: 12
+  weather_model: era5
+  air_quality_output: data/raw/hanoi_air_quality_2022_2026.csv
+  weather_output: data/raw/hanoi_weather_2022_2026.csv
+  manifest_output: data/raw/hanoi_history_manifest.json
+
+cleaning:
+  timezone: Asia/Ho_Chi_Minh
+  frequency: 1h
+  interpolation_limit_hours: 3
+  spike_window_hours: 24
+  spike_min_periods: 12
+  spike_z_threshold: 8.0
+  replace_spikes: false
+  spike_columns:
+    air: [pm25, pm10, co, no2, so2, o3, us_aqi]
+    weather: [temperature, humidity, wind_speed, surface_pressure]
+  spike_min_absolute_change:
+    air:
+      pm25: 50
+      pm10: 75
+      co: 500
+      no2: 100
+      so2: 100
+      o3: 100
+      us_aqi: 50
+    weather:
+      temperature: 8
+      humidity: 30
+      wind_speed: 50
+      surface_pressure: 15
+  air_input: data/raw/hanoi_air_quality_2022_2026.csv
+  weather_input: data/raw/hanoi_weather_2022_2026.csv
+  air_output: data/processed/air_quality_history_clean.csv
+  weather_output: data/processed/weather_history_clean.csv
+  merged_output: data/processed/air_quality_clean.csv
+  report_output: data/processed/cleaning_report.json
+  valid_ranges:
+    air:
+      pm25: [0, 1000]
+      pm10: [0, 1500]
+      co: [0, 60000]
+      no2: [0, 2000]
+      so2: [0, 2000]
+      o3: [0, 1000]
+      us_aqi: [0, 500]
+    weather:
+      temperature: [-20, 60]
+      humidity: [0, 100]
+      wind_speed: [0, 250]
+      wind_direction: [0, 360]
+      precipitation: [0, 500]
+      rain: [0, 500]
+      surface_pressure: [800, 1100]
+      cloud_cover: [0, 100]
+  units:
+    air:
+      pm25: ug/m3
+      pm10: ug/m3
+      co: ug/m3
+      no2: ug/m3
+      so2: ug/m3
+      o3: ug/m3
+      us_aqi: index
+    weather:
+      temperature: celsius
+      humidity: percent
+      wind_speed: km/h
+      wind_direction: degree
+      precipitation: mm
+      rain: mm
+      surface_pressure: hPa
+      cloud_cover: percent
+
+feature_engineering:
+  input: data/processed/air_quality_clean.csv
+  output: data/processed/ml_features.csv.gz
+  metadata_output: artifacts/feature_metadata.json
+  timezone: Asia/Ho_Chi_Minh
+  group_column: station_id
+  target_column: pm25
+  target_horizons: [1, 3, 6]
+  pm25_lags: [1, 2, 3, 6, 12, 24, 48, 72, 168]
+  pollutant_lags: [1, 3, 24]
+  weather_lags: [1, 3, 6, 24]
+  rolling_windows: [3, 6, 12, 24, 72, 168]
+  weather_rolling_windows: [6, 24]
+  ewm_halflives: [6, 24]
+  drop_incomplete_rows: true
+
+time_split:
+  input: data/processed/ml_features.csv.gz
+  output_dir: data/processed/splits
+  manifest_output: artifacts/time_split_manifest.json
+  timezone: Asia/Ho_Chi_Minh
+  timestamp_column: timestamp
+  group_column: station_id
+  validation_start: 2025-01-01
+  test_start: 2026-01-01
+  max_target_horizon_hours: 6
+
+forecast:
+  horizons: [1, 3, 6]
+  random_state: 42
+  split_dir: data/processed/splits
+  feature_metadata: artifacts/feature_metadata.json
+  artifacts_dir: artifacts/models
+  validation_metrics_output: artifacts/forecast_validation_metrics.csv
+  test_metrics_output: artifacts/forecast_test_metrics.csv
+  test_predictions_output: artifacts/forecast_test_predictions.csv.gz
+  training_report_output: artifacts/forecast_training_report.json
+  selection_metric: MAE
+  station_column: station_id
+  timestamp_column: timestamp
+  random_forest:
+    n_estimators: 80
+    max_depth: 20
+    min_samples_leaf: 3
+    max_features: 0.5
+    max_samples: 0.7
+  xgboost:
+    n_estimators: 350
+    learning_rate: 0.05
+    max_depth: 8
+    min_child_weight: 3
+    subsample: 0.8
+    colsample_bytree: 0.8
+  lightgbm:
+    n_estimators: 350
+    learning_rate: 0.05
+    num_leaves: 63
+    min_child_samples: 30
+    subsample: 0.8
+    colsample_bytree: 0.8
+  lstm:
+    sequence_length: 24
+    training_stride: 2
+    features:
+      - pm25
+      - pm10
+      - co
+      - no2
+      - o3
+      - temperature
+      - humidity
+      - wind_speed
+      - precipitation
+      - hour_sin
+      - hour_cos
+      - pm25_rolling_mean_24h
+      - pm25_rolling_std_24h
+    units: 48
+    dense_units: 32
+    dropout: 0.2
+    epochs: 6
+    batch_size: 512
+    patience: 2
+
+pollution_classification:
+  standard: WHO Global Air Quality Guidelines 2021
+  input: data/processed/air_quality_clean.csv
+  output: data/processed/pm25_who_levels.csv.gz
+  report_output: artifacts/pm25_who_classification_report.json
+  timestamp_column: timestamp
+  station_column: station_id
+  pm25_column: pm25
+  timezone: Asia/Ho_Chi_Minh
+  averaging_method: rolling_24h
+  min_valid_hours: 18
+
+anomaly:
+  split_dir: data/processed/splits
+  model_output: artifacts/models/anomaly_detector.joblib
+  output: data/processed/anomaly_results.csv.gz
+  report_output: artifacts/anomaly_detection_report.json
+  contamination: 0.03
+  random_state: 42
+  n_estimators: 300
+  max_samples: 4096
+  features:
+    - pm25
+    - pm10
+    - co
+    - no2
+    - so2
+    - o3
+    - temperature
+    - humidity
+    - wind_speed
+    - precipitation
+    - pm25_change_1h
+    - pm25_change_3h
+    - pm25_rolling_mean_24h
+    - pm25_rolling_std_24h
+    - stagnation_proxy
+    - hour_sin
+    - hour_cos
+  rules:
+    hard_ranges:
+      pm25: [0, 1000]
+      pm10: [0, 1500]
+      co: [0, 60000]
+      no2: [0, 2000]
+      so2: [0, 2000]
+      o3: [0, 1000]
+    pm25_jump_abs_1h: 75
+    pm25_jump_abs_3h: 100
+    flatline_std_24h: 0.2
+    flatline_min_mean: 5
+    pm25_pm10_ratio_max: 1.1
+    pm25_pm10_tolerance: 5
+    pm25_extreme: 200
+    pollution_episode_24h: 75
+
+cause_analysis:
+  split_dir: data/processed/splits
+  anomaly_results: data/processed/anomaly_results.csv.gz
+  profile_output: artifacts/models/cause_analyzer.joblib
+  output: data/processed/pollution_cause_analysis.csv.gz
+  report_output: artifacts/pollution_cause_analysis_report.json
+  timezone: Asia/Ho_Chi_Minh
+  baseline_groups: [station_id, month]
+  minimum_hypothesis_score: 0.35
+  event_pm25_current: 100
+  event_pm25_24h: 75
+  baseline_features:
+    - pm25
+    - pm10
+    - co
+    - no2
+    - so2
+    - o3
+    - temperature
+    - humidity
+    - wind_speed
+    - precipitation
+    - pm25_to_pm10_ratio
+
+alerts:
+  enabled: true
+  cooldown_minutes: 60

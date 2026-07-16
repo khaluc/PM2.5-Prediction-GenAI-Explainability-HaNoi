@@ -1,0 +1,108 @@
+{
+  "area": "Ha Noi",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "requested_frequency": "hourly",
+  "requested_start_date": "2022-01-01",
+  "requested_end_date": "2026-05-30",
+  "created_at": "2026-07-13T03:38:54.592038+00:00",
+  "locations": [
+    {
+      "station_id": "HN_HOAN_KIEM",
+      "name": "Hoan Kiem",
+      "latitude": 21.0285,
+      "longitude": 105.8542
+    },
+    {
+      "station_id": "HN_BA_DINH",
+      "name": "Ba Dinh",
+      "latitude": 21.0358,
+      "longitude": 105.8342
+    },
+    {
+      "station_id": "HN_CAU_GIAY",
+      "name": "Cau Giay",
+      "latitude": 21.0333,
+      "longitude": 105.79
+    },
+    {
+      "station_id": "HN_DONG_DA",
+      "name": "Dong Da",
+      "latitude": 21.018,
+      "longitude": 105.829
+    },
+    {
+      "station_id": "HN_HAI_BA_TRUNG",
+      "name": "Hai Ba Trung",
+      "latitude": 21.006,
+      "longitude": 105.857
+    },
+    {
+      "station_id": "HN_THANH_XUAN",
+      "name": "Thanh Xuan",
+      "latitude": 20.993,
+      "longitude": 105.811
+    },
+    {
+      "station_id": "HN_LONG_BIEN",
+      "name": "Long Bien",
+      "latitude": 21.0395,
+      "longitude": 105.891
+    },
+    {
+      "station_id": "HN_HA_DONG",
+      "name": "Ha Dong",
+      "latitude": 20.971,
+      "longitude": 105.779
+    }
+  ],
+  "weather": {
+    "provider": "Open-Meteo Historical Weather API",
+    "model": "era5",
+    "native_frequency": "hourly",
+    "rows": 309312,
+    "stations": 8,
+    "start": "2022-01-01T00:00:00+07:00",
+    "end": "2026-05-30T23:00:00+07:00",
+    "duplicates": 0,
+    "missing": {
+      "temperature": 0,
+      "humidity": 0,
+      "wind_speed": 0,
+      "precipitation": 0
+    }
+  },
+  "air_quality": {
+    "provider": "Open-Meteo Air Quality API / CAMS Global",
+    "official_available_start_date": "2022-08-01",
+    "actual_data_start": "2022-08-04T07:00:00+07:00",
+    "native_frequency": "3-hourly",
+    "api_output_frequency": "hourly",
+    "coverage_gaps": [
+      {
+        "start": "2022-01-01",
+        "end": "2022-07-31",
+        "reason": "CAMS Global data is unavailable before August 2022"
+      },
+      {
+        "start": "2022-08-01",
+        "end": "2022-08-04T06:00:00+07:00",
+        "reason": "Provider returned no pollutant values during archive initialization",
+        "removed_rows": 632
+      }
+    ],
+    "rows": 267976,
+    "stations": 8,
+    "start": "2022-08-04T07:00:00+07:00",
+    "end": "2026-05-30T23:00:00+07:00",
+    "duplicates": 0,
+    "missing": {
+      "pm25": 0,
+      "pm10": 0,
+      "co": 0,
+      "no2": 0,
+      "so2": 0,
+      "o3": 0,
+      "us_aqi": 192
+    }
+  }
+}

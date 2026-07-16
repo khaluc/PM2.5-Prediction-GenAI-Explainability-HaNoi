@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tin tức môi trường trong nước và quốc tế trên Environment AI">
+  <title>Tin môi trường · Environment AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/news.css') }}">
+  <script defer src="{{ url_for('static', filename='js/news.js') }}"></script>
+</head>
+<body class="news-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Environment AI">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 20c5-1 6-10 18-10-2 10-7 16-16 15 4-2 8-5 11-9-5 4-9 5-13 4Z"/></svg></span>
+        <span><strong>Environment AI</strong><small>Hanoi air intelligence</small></span>
+      </a>
+      <nav class="main-nav" aria-label="Điều hướng chính">
+        <a href="/#overview">Tổng quan</a>
+        <a href="/#forecast">Dự báo</a>
+        <a href="/#map-section">Bản đồ</a>
+        <a href="/#reports">Báo cáo</a>
+        <a class="active" href="/news" aria-current="page">Tin môi trường</a>
+      </nav>
+      <a class="source-link" href="https://moitruongthudo.vn/thong-tin" target="_blank" rel="noopener noreferrer">
+        Xem nguồn gốc <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="news-hero">
+      <div class="news-orb orb-a" aria-hidden="true"></div>
+      <div class="news-orb orb-b" aria-hidden="true"></div>
+      <div class="page-width news-hero-inner">
+        <div class="news-hero-copy">
+          <p class="news-eyebrow"><span></span> ENVIRONMENT BRIEFING</p>
+          <h1>Tin môi trường<br><em>đáng chú ý</em></h1>
+          <p>Theo dõi chính sách, sự kiện và những chuyển động môi trường trong nước, quốc tế trên một trang đọc gọn nhẹ.</p>
+        </div>
+        <div class="news-hero-art" aria-hidden="true">
+          <div class="planet-ring ring-one"></div>
+          <div class="planet-ring ring-two"></div>
+          <div class="eco-globe">
+            <svg viewBox="0 0 180 180">
+              <circle cx="90" cy="90" r="57"/>
+              <path d="M36 91h108M90 33c-24 21-29 89 0 114m0-114c24 21 29 89 0 114M48 57c23 13 61 13 84 0M48 123c23-13 61-13 84 0"/>
+              <path class="leaf-path" d="M99 80c13-26 37-24 48-34-2 27-17 43-43 40 10-6 19-14 27-24-10 9-20 15-32 18Z"/>
+            </svg>
+          </div>
+          <span class="float-tag tag-air">KHÔNG KHÍ</span>
+          <span class="float-tag tag-green">SỐNG XANH</span>
+          <span class="float-tag tag-policy">CHÍNH SÁCH</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-width news-content" aria-labelledby="news-heading">
+      <div class="news-toolbar">
+        <div>
+          <p class="section-kicker">BẢN TIN TỔNG HỢP</p>
+          <h2 id="news-heading">Mới cập nhật</h2>
+        </div>
+        <div class="news-actions">
+          <div class="category-tabs" role="tablist" aria-label="Chuyên mục tin">
+            <button class="active" type="button" role="tab" aria-selected="true" data-category="latest">Tin mới</button>
+            <button type="button" role="tab" aria-selected="false" data-category="domestic">Trong nước</button>
+            <button type="button" role="tab" aria-selected="false" data-category="international">Quốc tế</button>
+          </div>
+          <button class="news-refresh" id="news-refresh" type="button" aria-label="Làm mới tin tức">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.5 9a7 7 0 0 0-11.8-2.5L4 9m16 6-2.7 2.5A7 7 0 0 1 5.5 15"/></svg>
+            Làm mới
+          </button>
+        </div>
+      </div>
+
+      <div class="news-meta" id="news-status" aria-live="polite">
+        <span class="status-pulse"></span>
+        <span>Đang lấy bản tin từ nguồn…</span>
+      </div>
+
+      <div class="featured-news" id="featured-news" aria-live="polite">
+        <div class="news-loading large"><i></i><i></i><i></i></div>
+      </div>
+      <div class="news-grid" id="news-grid">
+        <div class="news-loading"><i></i><i></i><i></i></div>
+        <div class="news-loading"><i></i><i></i><i></i></div>
+        <div class="news-loading"><i></i><i></i><i></i></div>
+      </div>
+
+      <div class="news-empty hidden" id="news-empty" role="status">
+        <span aria-hidden="true">○</span>
+        <h3>Chưa có bản tin để hiển thị</h3>
+        <p>Hãy thử tải lại hoặc chuyển sang chuyên mục khác.</p>
+      </div>
+
+      <div class="news-pagination" aria-label="Phân trang tin tức">
+        <button id="news-prev" type="button" disabled><span aria-hidden="true">←</span> Trang trước</button>
+        <span>Trang <strong id="news-page-number">1</strong></span>
+        <button id="news-next" type="button">Trang sau <span aria-hidden="true">→</span></button>
+      </div>
+
+      <aside class="source-disclosure">
+        <div class="source-disclosure-mark" aria-hidden="true">i</div>
+        <div>
+          <strong>Nguồn và phạm vi sử dụng</strong>
+          <p>Environment AI chỉ hiển thị tiêu đề, ngày đăng, ảnh và mô tả ngắn từ trang danh mục công khai của Môi Trường Thủ Đô. Nội dung toàn văn luôn được mở tại website nguồn.</p>
+        </div>
+        <a href="https://moitruongthudo.vn/thong-tin" target="_blank" rel="noopener noreferrer">Môi Trường Thủ Đô ↗</a>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="news-footer">
+    <div class="page-width"><span>Environment AI · Decision support only</span><a href="/">Trở về bảng điều khiển</a></div>
+  </footer>
+</body>
+</html>

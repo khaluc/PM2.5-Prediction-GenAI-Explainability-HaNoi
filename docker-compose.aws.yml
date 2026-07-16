@@ -1,0 +1,119 @@
+name: environment-ai
+
+x-app-common: &app-common
+  image: environment-ai-app:${APP_VERSION:-latest}
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - ${PRODUCTION_ENV_FILE:-.env.production}
+  restart: unless-stopped
+  networks:
+    - backend
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-environment}
+      POSTGRES_USER: ${POSTGRES_USER:-environment}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    networks:
+      - backend
+
+  api:
+    <<: *app-common
+    command:
+      - sh
+      - -c
+      - >-
+        python scripts/init_database.py &&
+        exec uvicorn api.main:app --host 0.0.0.0 --port 8000
+        --proxy-headers --forwarded-allow-ips=*
+    environment:
+      DATABASE_HOST: db
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: ${POSTGRES_DB:-environment}
+      DATABASE_USER: ${POSTGRES_USER:-environment}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./output:/app/output
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=10)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 180s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  dashboard:
+    <<: *app-common
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:8501
+      - --workers
+      - "2"
+      - --threads
+      - "4"
+      - --timeout
+      - "120"
+      - --no-control-socket
+      - --access-logfile
+      - "-"
+      - --error-logfile
+      - "-"
+      - dashboard.app:app
+    environment:
+      ENVIRONMENT_API_URL: http://api:8000
+    expose:
+      - "8501"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8501/health', timeout=10)"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+      start_period: 30s
+    depends_on:
+      api:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:stable-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/aws/nginx/http.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      dashboard:
+        condition: service_healthy
+    networks:
+      - backend
+
+volumes:
+  postgres_data:
+
+networks:
+  backend:
+    driver: bridge

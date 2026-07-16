@@ -1,0 +1,177 @@
+{
+  "created_at": "2026-07-13T04:36:37.512582+00:00",
+  "protocol": {
+    "selection": "lowest mean validation MAE across horizons",
+    "test_usage": "test evaluated once after model selection",
+    "baseline": "persistence: future PM2.5 equals current PM2.5",
+    "lstm_sequence_length_hours": 24,
+    "lstm_training_stride": 2,
+    "mape_denominator_floor": 1.0
+  },
+  "rows": {
+    "train": 167704,
+    "validation": 70032,
+    "validation_comparable": 69848,
+    "test": 28752,
+    "test_comparable": 28568,
+    "lstm_train_sequences": 83760,
+    "lstm_validation_sequences": 69848
+  },
+  "horizons": [
+    1,
+    3,
+    6
+  ],
+  "features": {
+    "tree_feature_count": 121,
+    "lstm_features": [
+      "pm25",
+      "pm10",
+      "co",
+      "no2",
+      "o3",
+      "temperature",
+      "humidity",
+      "wind_speed",
+      "precipitation",
+      "hour_sin",
+      "hour_cos",
+      "pm25_rolling_mean_24h",
+      "pm25_rolling_std_24h",
+      "station__code"
+    ]
+  },
+  "validation_ranking": [
+    {
+      "model": "LightGBM",
+      "mean_MAE": 8.98695561898199,
+      "mean_RMSE": 13.575508296716981,
+      "mean_R2": 0.7869621169419019,
+      "mean_MAPE": 18.647758187002864
+    },
+    {
+      "model": "XGBoost",
+      "mean_MAE": 9.078373992729354,
+      "mean_RMSE": 13.72004109627712,
+      "mean_R2": 0.7830132808549441,
+      "mean_MAPE": 19.086145000482777
+    },
+    {
+      "model": "RandomForest",
+      "mean_MAE": 9.69999964090215,
+      "mean_RMSE": 14.57228514055872,
+      "mean_R2": 0.7615488481269388,
+      "mean_MAPE": 20.137302758829538
+    },
+    {
+      "model": "LSTM",
+      "mean_MAE": 11.040131387527886,
+      "mean_RMSE": 15.8342248975936,
+      "mean_R2": 0.7232565053895877,
+      "mean_MAPE": 21.727558186080007
+    },
+    {
+      "model": "Baseline",
+      "mean_MAE": 13.436258249968157,
+      "mean_RMSE": 19.832666206127875,
+      "mean_R2": 0.5347762898960474,
+      "mean_MAPE": 28.37020577353935
+    }
+  ],
+  "selected_model": "LightGBM",
+  "test_metrics": [
+    {
+      "model": "LightGBM",
+      "split": "test",
+      "horizon_hours": 1,
+      "samples": 28568,
+      "MAE": 3.177641707756431,
+      "RMSE": 5.724089934181241,
+      "R2": 0.965783010423048,
+      "MAPE": 6.526775684179801
+    },
+    {
+      "model": "LightGBM",
+      "split": "test",
+      "horizon_hours": 3,
+      "samples": 28568,
+      "MAE": 7.973761560749822,
+      "RMSE": 12.253699275694185,
+      "R2": 0.8431414574479581,
+      "MAPE": 17.094685295812344
+    },
+    {
+      "model": "LightGBM",
+      "split": "test",
+      "horizon_hours": 6,
+      "samples": 28568,
+      "MAE": 12.277495818304093,
+      "RMSE": 17.584459721229987,
+      "R2": 0.6774668100544222,
+      "MAPE": 28.635147427060065
+    }
+  ],
+  "duration_seconds": {
+    "validation_models": {
+      "Baseline": 0.015988999977707863,
+      "RandomForest": 222.66223310003988,
+      "XGBoost": 197.37530429998878,
+      "LightGBM": 60.27639660006389,
+      "LSTM": 68.96475959999952
+    },
+    "final_fit": 67.16377099999227,
+    "total": 629.5851857999805
+  },
+  "lstm": {
+    "best_epoch": 6,
+    "initial_history": {
+      "loss": [
+        0.4508436918258667,
+        0.2731262147426605,
+        0.23833318054676056,
+        0.2200048416852951,
+        0.20803938806056976,
+        0.1983736753463745
+      ],
+      "mae": [
+        0.4832693338394165,
+        0.36775004863739014,
+        0.33813583850860596,
+        0.32130786776542664,
+        0.31006598472595215,
+        0.3012217879295349
+      ],
+      "val_loss": [
+        0.7894182205200195,
+        0.6392710208892822,
+        0.5712775588035583,
+        0.5273809432983398,
+        0.5064246654510498,
+        0.49579834938049316
+      ],
+      "val_mae": [
+        0.6101129055023193,
+        0.5427320003509521,
+        0.5077192783355713,
+        0.4838939905166626,
+        0.46882134675979614,
+        0.4609696865081787
+      ]
+    }
+  },
+  "artifacts": {
+    "model_metadata": "artifacts\\models\\pm25_forecast.joblib",
+    "keras_model": null,
+    "validation_metrics": "artifacts\\forecast_validation_metrics.csv",
+    "test_metrics": "artifacts\\forecast_test_metrics.csv",
+    "test_predictions": "artifacts\\forecast_test_predictions.csv.gz"
+  },
+  "package_versions": {
+    "numpy": "1.24.3",
+    "pandas": "2.0.3",
+    "scikit-learn": "1.3.0",
+    "xgboost": "2.0.0",
+    "lightgbm": "4.0.0",
+    "tensorflow": "2.15.0"
+  }
+}
