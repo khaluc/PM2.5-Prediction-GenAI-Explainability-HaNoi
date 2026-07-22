@@ -199,6 +199,7 @@ def test_openapi_contains_required_routes() -> None:
         "/predict",
         "/detect-anomaly",
         "/forecast-explanation",
+        "/knowledge-graph/pm25",
         "/alerts",
         "/reports/generate",
         "/news",
@@ -207,6 +208,19 @@ def test_openapi_contains_required_routes() -> None:
         "/system/database",
     }
     assert required <= set(paths)
+
+
+def test_pm25_knowledge_graph_route_can_filter_relations() -> None:
+    client = TestClient(app)
+    response = client.get("/knowledge-graph/pm25", params={"relation": "EMITS"})
+    assert response.status_code == 200
+    graph = response.json()["graph"]
+    assert graph["relation_filter"] == "EMITS"
+    assert len(graph["edges"]) == 11
+    assert {edge["relation"] for edge in graph["edges"]} == {"EMITS"}
+    assert client.get(
+        "/knowledge-graph/pm25", params={"relation": "UNKNOWN"}
+    ).status_code == 422
 
 
 def test_hourly_update_status_and_manual_trigger(api_client: TestClient) -> None:

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Đồ thị tri thức tương tác về chất ô nhiễm, nguồn phát thải, khí tượng và biện pháp giảm nhẹ">
+  <title>Knowledge Graph không khí đô thị · Environment AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/knowledge_graph.css') }}">
+  <script defer src="{{ url_for('static', filename='js/knowledge_graph.js') }}"></script>
+</head>
+<body class="kg-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Environment AI">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M7 20c5-1 6-10 18-10-2 10-7 16-16 15 4-2 8-5 11-9-5 4-9 5-13 4Z"/></svg></span>
+        <span><strong>Environment AI</strong><small>Hanoi air intelligence</small></span>
+      </a>
+      <nav class="main-nav" aria-label="Điều hướng chính">
+        <a href="/#overview">Tổng quan</a>
+        <a href="/#forecast">Dự báo</a>
+        <a href="/#map-section">Bản đồ</a>
+        <a href="/#reports">Báo cáo</a>
+        <a class="active" href="/knowledge-graph" aria-current="page">Đồ thị tri thức</a>
+        <a href="/news">Tin môi trường</a>
+      </nav>
+      <a class="kg-back-link" href="/#forecast-explanation">← GenAI</a>
+    </div>
+  </header>
+
+  <main class="kg-main">
+    <section class="kg-intro">
+      <div class="page-width kg-intro-inner">
+        <div>
+          <p class="kg-eyebrow"><span></span> EXPLORABLE KNOWLEDGE</p>
+          <h1>Đồ thị tri thức <em>không khí đô thị</em></h1>
+          <p>Khám phá trực quan mối quan hệ giữa chất ô nhiễm, nguồn phát thải, yếu tố khí tượng và biện pháp giảm nhẹ.</p>
+        </div>
+        <div class="kg-intro-stats" aria-label="Thống kê đồ thị">
+          <div><strong id="kg-node-count">—</strong><span>Node</span></div>
+          <div><strong id="kg-edge-count">—</strong><span>Quan hệ</span></div>
+          <div><strong id="kg-source-count">—</strong><span>Nguồn</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page-width kg-workspace" aria-labelledby="kg-workspace-title">
+      <div class="kg-toolbar">
+        <div class="kg-toolbar-title">
+          <span class="kg-live-dot"></span>
+          <div><p>URBAN AIR KNOWLEDGE GRAPH</p><h2 id="kg-workspace-title">Khám phá quan hệ</h2></div>
+        </div>
+        <label class="kg-search" for="kg-search-input">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+          <input id="kg-search-input" type="search" placeholder="Tìm PM10, NO2, Rain…" autocomplete="off">
+        </label>
+        <div class="kg-relation-filters" aria-label="Lọc quan hệ">
+          <button class="active emits" type="button" data-relation="EMITS" aria-pressed="true"><i></i>EMITS</button>
+          <button class="active influenced" type="button" data-relation="INFLUENCED_BY" aria-pressed="true"><i></i>INFLUENCED_BY</button>
+          <button class="active mitigated" type="button" data-relation="MITIGATED_BY" aria-pressed="true"><i></i>MITIGATED_BY</button>
+        </div>
+        <button class="kg-reset" id="kg-reset" type="button" title="Đặt lại bố cục">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.5 9a7 7 0 0 0-11.8-2.5L4 9m16 6-2.7 2.5A7 7 0 0 1 5.5 15"/></svg>
+          Đặt lại
+        </button>
+      </div>
+
+      <div class="kg-board">
+        <section class="kg-canvas-shell" aria-label="Vùng đồ thị tương tác">
+          <div class="kg-canvas-status" id="kg-canvas-status" role="status">Đang tải Knowledge Graph…</div>
+          <svg id="kg-network" role="application" aria-label="Đồ thị tri thức không khí đô thị có thể kéo, thu phóng và chọn node">
+            <defs>
+              <linearGradient id="kg-focus-gradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8755a5"/><stop offset="1" stop-color="#51306e"/></linearGradient>
+              <marker id="kg-arrow-emits" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 9 4.5 0 9Z"/></marker>
+              <marker id="kg-arrow-influenced" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 9 4.5 0 9Z"/></marker>
+              <marker id="kg-arrow-mitigated" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 9 4.5 0 9Z"/></marker>
+              <filter id="kg-node-shadow" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="5" stdDeviation="6" flood-color="#102d31" flood-opacity=".14"/></filter>
+            </defs>
+            <g id="kg-viewport">
+              <g id="kg-edges"></g>
+              <g id="kg-edge-labels"></g>
+              <g id="kg-nodes"></g>
+            </g>
+          </svg>
+          <div class="kg-zoom-controls" aria-label="Điều khiển thu phóng">
+            <button id="kg-zoom-in" type="button" aria-label="Phóng to">+</button>
+            <button id="kg-zoom-out" type="button" aria-label="Thu nhỏ">−</button>
+            <button id="kg-fit" type="button" aria-label="Vừa khung">⌂</button>
+          </div>
+          <div class="kg-canvas-help"><span>Kéo node</span><span>Cuộn để zoom</span><span>Kéo nền để di chuyển</span></div>
+        </section>
+
+        <aside class="kg-inspector" id="kg-inspector" aria-live="polite">
+          <div class="kg-inspector-empty" id="kg-inspector-empty">
+            <span class="kg-inspector-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48"><circle cx="24" cy="12" r="6"/><circle cx="10" cy="34" r="6"/><circle cx="38" cy="34" r="6"/><path d="m20 17-7 11m15-11 7 11M16 34h16"/></svg>
+            </span>
+            <p class="section-kicker">NODE INSPECTOR</p>
+            <h3>Chọn một node hoặc cạnh</h3>
+            <p>Nhấp vào phần tử trên đồ thị để xem mô tả, quan hệ liên quan, phạm vi sử dụng và nguồn tham chiếu.</p>
+          </div>
+          <div class="kg-inspector-content hidden" id="kg-inspector-content">
+            <div class="kg-inspector-type" id="kg-inspector-type">NODE</div>
+            <h3 id="kg-inspector-title">—</h3>
+            <p id="kg-inspector-description">—</p>
+            <div class="kg-inspector-meta" id="kg-inspector-meta"></div>
+            <div class="kg-inspector-relations">
+              <h4>Quan hệ liên quan</h4>
+              <div id="kg-inspector-relations"></div>
+            </div>
+            <div class="kg-inspector-sources">
+              <h4>Nguồn tham chiếu</h4>
+              <div id="kg-inspector-sources"></div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="kg-legend" aria-label="Chú giải loại node">
+        <strong>Chú giải</strong>
+        <span><i class="pollutant"></i>Chất ô nhiễm</span>
+        <span><i class="source"></i>Nguồn phát thải</span>
+        <span><i class="weather"></i>Khí tượng</span>
+        <span><i class="control"></i>Biện pháp giảm nhẹ</span>
+      </div>
+
+      <aside class="kg-safety-note">
+        <strong>Phạm vi diễn giải</strong>
+        <p id="kg-disclaimer">Các quan hệ là kiến thức miền chung, không phải kết luận nguyên nhân cho một sự kiện ô nhiễm cụ thể.</p>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="kg-footer">
+    <div class="page-width"><span>Environment AI · Decision support only</span><a href="/">Trở về bảng điều khiển</a></div>
+  </footer>
+</body>
+</html>

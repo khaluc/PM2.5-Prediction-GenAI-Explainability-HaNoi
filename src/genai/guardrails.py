@@ -39,6 +39,7 @@ def validate_generated_explanation(
     payload: dict[str, Any],
     *,
     allowed_numbers: Iterable[int | float],
+    forbidden_terms: Iterable[str] = (),
 ) -> dict[str, Any]:
     """Validate shape, claims and numerical grounding of an LLM response."""
     for field in REQUIRED_TEXT_FIELDS:
@@ -55,6 +56,20 @@ def validate_generated_explanation(
     text = _all_text(payload)
     if any(pattern.search(text) for pattern in FORBIDDEN_CLAIMS):
         raise GuardrailViolation("Generated text contains an unsupported or unsafe claim")
+    folded_text = text.casefold()
+    unexpected_terms = sorted(
+        {
+            term.strip()
+            for term in forbidden_terms
+            if isinstance(term, str) and term.strip() and term.strip().casefold() in folded_text
+        },
+        key=str.casefold,
+    )
+    if unexpected_terms:
+        raise GuardrailViolation(
+            "Generated text mentions unsupported source candidates: "
+            + ", ".join(unexpected_terms)
+        )
 
     allowed = {_normalise_number(value) for value in allowed_numbers}
     # Pollutant notation is a name, not a generated measurement. Remove it before

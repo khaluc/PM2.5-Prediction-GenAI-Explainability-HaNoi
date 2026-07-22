@@ -11,7 +11,16 @@ from api.dependencies import (
     get_hourly_update_service,
     get_monitoring_repository,
 )
-from api.routes import alerts, explanations, monitoring, news, predictions, reports, system
+from api.routes import (
+    alerts,
+    explanations,
+    knowledge,
+    monitoring,
+    news,
+    predictions,
+    reports,
+    system,
+)
 
 
 @asynccontextmanager
@@ -36,6 +45,7 @@ app = FastAPI(
 app.include_router(monitoring.router)
 app.include_router(predictions.router)
 app.include_router(explanations.router)
+app.include_router(knowledge.router)
 app.include_router(alerts.router)
 app.include_router(reports.router)
 app.include_router(news.router)

@@ -462,6 +462,93 @@ function resetForecastExplanation() {
   container.replaceChildren(message);
 }
 
+function renderKnowledgeGraph(knowledge) {
+  if (!knowledge || !Array.isArray(knowledge.relations)) return null;
+
+  const section = document.createElement("section");
+  section.className = "knowledge-graph";
+  section.setAttribute("aria-label", "Knowledge Graph PM2.5");
+
+  const heading = document.createElement("div");
+  heading.className = "knowledge-graph-heading";
+  const title = document.createElement("h4");
+  title.textContent = "Knowledge Graph PM2.5";
+  const scope = document.createElement("span");
+  scope.textContent = "Kiến thức miền · không kết luận nhân quả";
+  heading.append(title, scope);
+
+  const flow = document.createElement("div");
+  flow.className = "knowledge-graph-flow";
+  const focus = document.createElement("div");
+  focus.className = "knowledge-focus-node";
+  const focusLabel = document.createElement("strong");
+  focusLabel.textContent = "PM2.5";
+  const focusType = document.createElement("small");
+  focusType.textContent = "Chất ô nhiễm trung tâm";
+  focus.append(focusLabel, focusType);
+  flow.append(focus);
+
+  const supportedSources = knowledge.supported_emission_sources || [];
+  const unverifiedSources = knowledge.unverified_emission_sources || [];
+  const groups = [
+    {
+      relation: "EMITS",
+      label: "Nguồn phát thải",
+      items: [
+        ...supportedSources.map((item) => ({ ...item, state: "supported", note: "Có dữ liệu liên quan hiện tại" })),
+        ...unverifiedSources.map((item) => ({ ...item, state: "unverified", note: "Chưa có dữ liệu xác minh hiện tại" })),
+      ],
+    },
+    {
+      relation: "INFLUENCED_BY",
+      label: "Yếu tố khí tượng",
+      items: (knowledge.meteorological_factors || []).map((item) => ({
+        ...item,
+        state: item.currently_observed ? "relevant" : "general",
+        note: item.currently_observed ? "Có dữ liệu thời tiết hiện tại" : "Kiến thức khí tượng chung",
+      })),
+    },
+    {
+      relation: "MITIGATED_BY",
+      label: "Biện pháp giảm nhẹ",
+      items: (knowledge.mitigations || []).map((item) => ({
+        ...item,
+        state: "general",
+        note: "Biện pháp quy hoạch/chính sách",
+      })),
+    },
+  ];
+
+  groups.forEach((group) => {
+    const column = document.createElement("div");
+    column.className = "knowledge-relation-group";
+    const relation = document.createElement("b");
+    relation.textContent = group.relation;
+    const label = document.createElement("p");
+    label.textContent = group.label;
+    const nodes = document.createElement("div");
+    nodes.className = "knowledge-node-list";
+    group.items.forEach((item) => {
+      const node = document.createElement("div");
+      node.className = `knowledge-node ${item.state}`;
+      const nodeLabel = document.createElement("span");
+      nodeLabel.textContent = item.label_vi || item.id;
+      const note = document.createElement("small");
+      note.textContent = item.note;
+      node.append(nodeLabel, note);
+      nodes.append(node);
+    });
+    column.append(relation, label, nodes);
+    flow.append(column);
+  });
+
+  const disclaimer = document.createElement("p");
+  disclaimer.className = "knowledge-disclaimer";
+  disclaimer.textContent = knowledge.disclaimer_vi || "Knowledge Graph chỉ cung cấp kiến thức tham khảo có kiểm soát.";
+  section.append(heading, flow, disclaimer);
+  return section;
+}
+
 function renderForecastExplanation(payload) {
   const result = payload?.result || payload || {};
   const explanation = result.explanation || {};
@@ -494,7 +581,11 @@ function renderForecastExplanation(payload) {
   const footer = document.createElement("div"); footer.className = "genai-result-footer";
   const uncertainty = document.createElement("p"); uncertainty.textContent = explanation.uncertainty || "Dự báo có sai số và cần được xác minh bằng quan trắc.";
   const facts = document.createElement("span"); facts.textContent = `${forecast.model || "ML"} · +${forecast.horizon_hours || "—"}h · ${formatNumber(forecast.predicted_pm25)} µg/m³`;
-  footer.append(uncertainty, facts); container.append(header, summary, columns, footer);
+  footer.append(uncertainty, facts);
+  const knowledgeGraph = renderKnowledgeGraph(result.grounding?.knowledge_graph);
+  container.append(header, summary, columns);
+  if (knowledgeGraph) container.append(knowledgeGraph);
+  container.append(footer);
 }
 
 function renderSnapshot(snapshot) {

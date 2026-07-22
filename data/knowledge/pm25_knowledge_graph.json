@@ -1,0 +1,396 @@
+{
+  "graph_id": "urban-air-quality-domain-v2",
+  "schema_version": "2.0",
+  "focus_node": "pm25",
+  "title_vi": "Knowledge Graph chất lượng không khí đô thị",
+  "title_en": "Urban Air Quality Knowledge Graph",
+  "disclaimer_vi": "EMITS là kiến thức miền chung và không xác nhận nguồn phát thải tại thời điểm hiện tại. INFLUENCED_BY mô tả yếu tố khí tượng có thể làm thay đổi nồng độ hoặc vận chuyển chất ô nhiễm. MITIGATED_BY là biện pháp định hướng, hiệu quả thực tế cần được đánh giá theo địa điểm và thiết kế cụ thể.",
+  "nodes": [
+    {
+      "id": "pm25",
+      "type": "pollutant",
+      "label_vi": "PM2.5",
+      "label_en": "PM2.5",
+      "description_vi": "Hạt bụi mịn có đường kính khí động học không lớn hơn 2,5 µm."
+    },
+    {
+      "id": "pm10",
+      "type": "pollutant",
+      "label_vi": "PM10",
+      "label_en": "PM10",
+      "description_vi": "Hạt bụi có đường kính khí động học không lớn hơn 10 µm."
+    },
+    {
+      "id": "no2",
+      "type": "pollutant",
+      "label_vi": "NO2",
+      "label_en": "Nitrogen dioxide",
+      "description_vi": "Nitơ dioxide là chất ô nhiễm khí hình thành chủ yếu từ quá trình đốt nhiên liệu."
+    },
+    {
+      "id": "so2",
+      "type": "pollutant",
+      "label_vi": "SO2",
+      "label_en": "Sulfur dioxide",
+      "description_vi": "Lưu huỳnh dioxide liên quan chủ yếu đến đốt nhiên liệu chứa lưu huỳnh và một số quá trình công nghiệp."
+    },
+    {
+      "id": "co",
+      "type": "pollutant",
+      "label_vi": "CO",
+      "label_en": "Carbon monoxide",
+      "description_vi": "Carbon monoxide là khí sinh ra từ quá trình cháy không hoàn toàn."
+    },
+    {
+      "id": "vehicle_emission",
+      "type": "emission_source",
+      "label_vi": "Khí thải phương tiện",
+      "label_en": "Vehicle Emission",
+      "aliases_vi": ["khí thải phương tiện", "phương tiện", "giao thông", "xe cơ giới"]
+    },
+    {
+      "id": "factory",
+      "type": "emission_source",
+      "label_vi": "Nhà máy",
+      "label_en": "Factory",
+      "aliases_vi": ["nhà máy", "công nghiệp", "ống khói"]
+    },
+    {
+      "id": "construction",
+      "type": "emission_source",
+      "label_vi": "Xây dựng",
+      "label_en": "Construction",
+      "aliases_vi": ["xây dựng", "công trường", "bụi công trình"]
+    },
+    {
+      "id": "wind",
+      "type": "meteorological_factor",
+      "label_vi": "Gió",
+      "label_en": "Wind"
+    },
+    {
+      "id": "humidity",
+      "type": "meteorological_factor",
+      "label_vi": "Độ ẩm",
+      "label_en": "Humidity"
+    },
+    {
+      "id": "rain",
+      "type": "meteorological_factor",
+      "label_vi": "Mưa",
+      "label_en": "Rain"
+    },
+    {
+      "id": "temperature",
+      "type": "meteorological_factor",
+      "label_vi": "Nhiệt độ",
+      "label_en": "Temperature"
+    },
+    {
+      "id": "tree_planting",
+      "type": "mitigation_measure",
+      "label_vi": "Trồng cây",
+      "label_en": "Tree Planting"
+    },
+    {
+      "id": "low_emission_zone",
+      "type": "mitigation_measure",
+      "label_vi": "Vùng phát thải thấp",
+      "label_en": "Low Emission Zone"
+    },
+    {
+      "id": "public_transport",
+      "type": "mitigation_measure",
+      "label_vi": "Giao thông công cộng",
+      "label_en": "Public Transport"
+    }
+  ],
+  "edges": [
+    {
+      "source": "vehicle_emission",
+      "relation": "EMITS",
+      "target": "pm25",
+      "statement_vi": "Phương tiện đốt nhiên liệu có thể phát thải vật chất hạt mịn.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["traffic_congestion", "high_no2", "high_co"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_vehicle_emissions"]
+    },
+    {
+      "source": "vehicle_emission",
+      "relation": "EMITS",
+      "target": "pm10",
+      "statement_vi": "Giao thông đường bộ có thể đóng góp PM10 từ khí thải và các nguồn không qua ống xả.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["traffic_congestion"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_vehicle_emissions", "eea_transport_pollutants"]
+    },
+    {
+      "source": "vehicle_emission",
+      "relation": "EMITS",
+      "target": "no2",
+      "statement_vi": "Xe ô tô, xe tải và xe buýt là các nguồn phát thải liên quan đến NO2/NOx.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["traffic_congestion", "high_no2"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_no2_basics", "epa_vehicle_emissions"]
+    },
+    {
+      "source": "vehicle_emission",
+      "relation": "EMITS",
+      "target": "co",
+      "statement_vi": "Quá trình đốt nhiên liệu trong phương tiện có thể phát thải CO.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["traffic_congestion", "high_co"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_vehicle_emissions", "epa_co_overview"]
+    },
+    {
+      "source": "factory",
+      "relation": "EMITS",
+      "target": "pm25",
+      "statement_vi": "Ống khói và hoạt động công nghiệp có thể phát thải trực tiếp hoặc tạo tiền chất PM2.5.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_industrial_emission", "industrial_plume_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_pm_basics"]
+    },
+    {
+      "source": "factory",
+      "relation": "EMITS",
+      "target": "pm10",
+      "statement_vi": "Hoạt động công nghiệp có thể phát sinh vật chất hạt PM10.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_industrial_emission", "industrial_plume_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_pm_basics"]
+    },
+    {
+      "source": "factory",
+      "relation": "EMITS",
+      "target": "no2",
+      "statement_vi": "Đốt nhiên liệu tại nhà máy và cơ sở công nghiệp có thể phát thải NO2/NOx.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_industrial_emission", "industrial_plume_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_no2_basics"]
+    },
+    {
+      "source": "factory",
+      "relation": "EMITS",
+      "target": "so2",
+      "statement_vi": "Đốt nhiên liệu hóa thạch và một số quá trình công nghiệp là nguồn SO2 quan trọng.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_industrial_emission", "industrial_plume_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_so2_basics"]
+    },
+    {
+      "source": "factory",
+      "relation": "EMITS",
+      "target": "co",
+      "statement_vi": "Các quá trình đốt nhiên liệu không hoàn toàn trong nguồn cố định có thể phát sinh CO.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_industrial_emission", "industrial_plume_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_co_overview"]
+    },
+    {
+      "source": "construction",
+      "relation": "EMITS",
+      "target": "pm25",
+      "statement_vi": "Hoạt động xây dựng có thể phát sinh bụi hạt, bao gồm phần hạt mịn.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_construction_activity", "coarse_dust_signal"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_pm_basics"]
+    },
+    {
+      "source": "construction",
+      "relation": "EMITS",
+      "target": "pm10",
+      "statement_vi": "Công trường và hoạt động xây dựng có thể là nguồn bụi PM10.",
+      "claim_scope": "general_domain_knowledge",
+      "activation_evidence_codes": ["verified_construction_activity", "coarse_dust_signal"],
+      "event_claim_allowed": false,
+      "source_refs": ["epa_pm_basics"]
+    },
+    {
+      "source": "pm25",
+      "relation": "INFLUENCED_BY",
+      "target": "wind",
+      "statement_vi": "Gió ảnh hưởng đến khuếch tán và vận chuyển PM2.5; gió mạnh không phải lúc nào cũng làm nồng độ tại điểm nhận giảm.",
+      "claim_scope": "meteorological_influence",
+      "activation_evidence_codes": ["wind_observed", "low_wind", "dispersive_wind"],
+      "event_claim_allowed": false,
+      "source_refs": ["acp_meteorology_pm25_transport"]
+    },
+    {
+      "source": "pm25",
+      "relation": "INFLUENCED_BY",
+      "target": "humidity",
+      "statement_vi": "Độ ẩm có thể liên quan đến biến đổi kích thước, thành phần và nồng độ PM2.5.",
+      "claim_scope": "meteorological_influence",
+      "activation_evidence_codes": ["humidity_observed", "high_humidity"],
+      "event_claim_allowed": false,
+      "source_refs": ["acp_pm25_climate_sensitivity"]
+    },
+    {
+      "source": "pm25",
+      "relation": "INFLUENCED_BY",
+      "target": "rain",
+      "statement_vi": "Mưa có thể loại bỏ aerosol khỏi khí quyển; hiệu quả phụ thuộc cường độ và tần suất mưa.",
+      "claim_scope": "meteorological_influence",
+      "activation_evidence_codes": ["rain_observed", "rain_present", "little_rain"],
+      "event_claim_allowed": false,
+      "source_refs": ["acp_rainfall_aerosol_removal"]
+    },
+    {
+      "source": "pm25",
+      "relation": "INFLUENCED_BY",
+      "target": "temperature",
+      "statement_vi": "Nhiệt độ có thể ảnh hưởng cân bằng hóa học, bay hơi và hình thành các thành phần PM2.5.",
+      "claim_scope": "meteorological_influence",
+      "activation_evidence_codes": ["temperature_observed"],
+      "event_claim_allowed": false,
+      "source_refs": ["acp_pm25_climate_sensitivity"]
+    },
+    {
+      "source": "pm25",
+      "relation": "MITIGATED_BY",
+      "target": "tree_planting",
+      "statement_vi": "Cây đô thị có thể loại bỏ một phần PM2.5, nhưng hiệu quả phụ thuộc loài cây, cấu hình và điều kiện địa phương.",
+      "mitigation_scope": "urban_planning_measure",
+      "source_refs": ["usfs_tree_pm25_removal"]
+    },
+    {
+      "source": "pm10",
+      "relation": "MITIGATED_BY",
+      "target": "tree_planting",
+      "statement_vi": "Tán cây đô thị có thể hỗ trợ loại bỏ một phần PM10 khỏi không khí.",
+      "mitigation_scope": "urban_planning_measure",
+      "source_refs": ["usfs_tree_pollution_removal"]
+    },
+    {
+      "source": "no2",
+      "relation": "MITIGATED_BY",
+      "target": "tree_planting",
+      "statement_vi": "Cây đô thị có thể hấp thu một phần NO2; hiệu quả thực tế phụ thuộc thiết kế không gian xanh.",
+      "mitigation_scope": "urban_planning_measure",
+      "source_refs": ["usfs_tree_pollution_removal"]
+    },
+    {
+      "source": "so2",
+      "relation": "MITIGATED_BY",
+      "target": "tree_planting",
+      "statement_vi": "Cây đô thị có thể hỗ trợ loại bỏ một phần SO2 khỏi không khí.",
+      "mitigation_scope": "urban_planning_measure",
+      "source_refs": ["usfs_tree_pollution_removal"]
+    },
+    {
+      "source": "co",
+      "relation": "MITIGATED_BY",
+      "target": "tree_planting",
+      "statement_vi": "Cây đô thị có thể tham gia loại bỏ một phần CO, nhưng mức cải thiện chất lượng không khí thường phụ thuộc bối cảnh đô thị.",
+      "mitigation_scope": "urban_planning_measure",
+      "source_refs": ["usfs_tree_pollution_removal"]
+    },
+    {
+      "source": "vehicle_emission",
+      "relation": "MITIGATED_BY",
+      "target": "low_emission_zone",
+      "statement_vi": "Vùng phát thải thấp có thể hạn chế phương tiện phát thải cao và hỗ trợ giảm phát thải giao thông.",
+      "mitigation_scope": "transport_policy_measure",
+      "source_refs": ["ec_low_emission_zones"]
+    },
+    {
+      "source": "vehicle_emission",
+      "relation": "MITIGATED_BY",
+      "target": "public_transport",
+      "statement_vi": "Ưu tiên giao thông công cộng có thể giảm nhu cầu đi xe cá nhân và áp lực phát thải tính trên mỗi hành khách.",
+      "mitigation_scope": "transport_policy_measure",
+      "source_refs": ["eea_public_transport"]
+    }
+  ],
+  "sources": [
+    {
+      "id": "epa_pm_basics",
+      "organization": "US EPA",
+      "title": "Particulate Matter (PM) Basics",
+      "url": "https://www.epa.gov/pm-pollution/particulate-matter-pm-basics"
+    },
+    {
+      "id": "epa_vehicle_emissions",
+      "organization": "US EPA",
+      "title": "Smog Vehicle Emissions",
+      "url": "https://www.epa.gov/greenvehicles/smog-vehicle-emissions"
+    },
+    {
+      "id": "epa_no2_basics",
+      "organization": "US EPA",
+      "title": "Basic Information about NO2",
+      "url": "https://www.epa.gov/no2-pollution/basic-information-about-no2"
+    },
+    {
+      "id": "epa_so2_basics",
+      "organization": "US EPA",
+      "title": "Sulfur Dioxide Basics",
+      "url": "https://www.epa.gov/so2-pollution/sulfur-dioxide-basics"
+    },
+    {
+      "id": "epa_co_overview",
+      "organization": "US EPA",
+      "title": "Overview of Carbon Monoxide Air Quality in the United States",
+      "url": "https://www.epa.gov/system/files/documents/2024-08/co_2023.pdf"
+    },
+    {
+      "id": "eea_transport_pollutants",
+      "organization": "European Environment Agency",
+      "title": "Air pollution from transport",
+      "url": "https://www.eea.europa.eu/en/analysis/publications/sustainability-of-europes-mobility-systems/air-pollution"
+    },
+    {
+      "id": "acp_meteorology_pm25_transport",
+      "organization": "Atmospheric Chemistry and Physics",
+      "title": "Meteorology impact on PM2.5 change over a receptor region",
+      "url": "https://acp.copernicus.org/articles/22/3579/2022/"
+    },
+    {
+      "id": "acp_pm25_climate_sensitivity",
+      "organization": "Atmospheric Chemistry and Physics",
+      "title": "Sensitivity of PM2.5 to climate in the Eastern US",
+      "url": "https://acp.copernicus.org/articles/7/4295/2007/"
+    },
+    {
+      "id": "acp_rainfall_aerosol_removal",
+      "organization": "Atmospheric Chemistry and Physics",
+      "title": "What rainfall rates are most important to wet removal of different aerosol types?",
+      "url": "https://acp.copernicus.org/articles/21/16797/2021/"
+    },
+    {
+      "id": "usfs_tree_pm25_removal",
+      "organization": "USDA Forest Service",
+      "title": "Modeled PM2.5 removal by trees in ten US cities and associated health effects",
+      "url": "https://research.fs.usda.gov/treesearch/43676"
+    },
+    {
+      "id": "usfs_tree_pollution_removal",
+      "organization": "USDA Forest Service",
+      "title": "Air pollution removal by urban trees and shrubs in the United States",
+      "url": "https://research.fs.usda.gov/treesearch/14743"
+    },
+    {
+      "id": "ec_low_emission_zones",
+      "organization": "European Commission",
+      "title": "Urban Vehicle Access Regulations",
+      "url": "https://transport.ec.europa.eu/transport-themes/urban-transport/urban-vehicle-access-regulations_en"
+    },
+    {
+      "id": "eea_public_transport",
+      "organization": "European Environment Agency",
+      "title": "Passenger transport activity",
+      "url": "https://www.eea.europa.eu/en/analysis/publications/sustainability-of-europes-mobility-systems/passenger-transport-activity"
+    }
+  ]
+}

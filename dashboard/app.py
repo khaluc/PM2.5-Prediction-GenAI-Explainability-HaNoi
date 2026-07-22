@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STATION_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{2,64}$")
 REPORT_ID_PATTERN = re.compile(r"^RPT-[A-F0-9]{16}$")
 NEWS_CATEGORIES = {"latest", "domestic", "international"}
+KNOWLEDGE_RELATIONS = {"EMITS", "INFLUENCED_BY", "MITIGATED_BY"}
 
 
 def _client() -> DashboardApiClient:
@@ -65,6 +66,10 @@ def create_app(*, api_client: DashboardApiClient | Any | None = None, testing: b
     @app.get("/news")
     def news_page():
         return render_template("news.html")
+
+    @app.get("/knowledge-graph")
+    def knowledge_graph_page():
+        return render_template("knowledge_graph.html")
 
     @app.get("/health")
     def health():
@@ -202,6 +207,16 @@ def create_app(*, api_client: DashboardApiClient | Any | None = None, testing: b
         }
         return jsonify(
             _client().request("POST", "/forecast-explanation", json=backend_payload)
+        )
+
+    @app.get("/api/knowledge-graph/pm25")
+    def pm25_knowledge_graph():
+        relation = str(request.args.get("relation") or "").strip().upper()
+        if relation and relation not in KNOWLEDGE_RELATIONS:
+            return jsonify({"error": "invalid_knowledge_relation"}), 400
+        params = {"relation": relation} if relation else None
+        return jsonify(
+            _client().request("GET", "/knowledge-graph/pm25", params=params)
         )
 
     return app

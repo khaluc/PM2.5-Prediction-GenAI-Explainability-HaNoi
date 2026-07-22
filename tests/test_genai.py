@@ -57,6 +57,17 @@ def test_context_distinguishes_observed_conditions_from_causes() -> None:
         "traffic_congestion",
     } <= codes
     assert context["traffic"]["source"] == "tomtom_flow_segment"
+    knowledge = context["knowledge_graph"]
+    assert [item["id"] for item in knowledge["supported_emission_sources"]] == [
+        "vehicle_emission"
+    ]
+    assert {item["id"] for item in knowledge["unverified_emission_sources"]} == {
+        "factory",
+        "construction",
+    }
+    assert all(
+        item["currently_observed"] for item in knowledge["meteorological_factors"]
+    )
 
 
 def test_low_confidence_traffic_is_not_used_as_contributing_condition() -> None:
@@ -74,6 +85,11 @@ def test_explanation_falls_back_safely_without_groq_key() -> None:
     assert "không phải AQI chính thức" in result["explanation"]["uncertainty"]
     assert "có thể" in " ".join(result["explanation"]["contributing_conditions"])
     assert result["grounding"]["traffic"]["congestion_percent"] == 50.0
+    assert result["grounding"]["knowledge_graph"]["graph_id"] == "urban-air-quality-domain-v2"
+    assert "Nhóm nhạy cảm" in result["explanation"]["sensitive_group_advice"]
+    actions = " ".join(result["explanation"]["recommended_actions"]).lower()
+    assert "máy lọc không khí" not in actions
+    assert "khẩu trang" not in actions
 
 
 def test_valid_grounded_groq_json_is_used() -> None:
@@ -94,6 +110,8 @@ def test_valid_grounded_groq_json_is_used() -> None:
         assert body["model"] == "openai/gpt-oss-120b"
         assert body["max_completion_tokens"] == 1400
         assert body["response_format"] == {"type": "json_object"}
+        assert "knowledge_graph" in body["messages"][1]["content"]
+        assert "unverified_emission_sources" in body["messages"][1]["content"]
         return httpx.Response(
             200,
             json={"choices": [{"message": {"content": json.dumps(generated, ensure_ascii=False)}}]},
@@ -135,3 +153,32 @@ def test_unsupported_groq_claim_or_number_triggers_fallback() -> None:
     assert result["generation"]["mode"] == "deterministic_fallback"
     assert result["generation"]["fallback_reason"] == "provider_or_guardrail_failure"
     assert "nhà máy" not in result["explanation"]["summary"].lower()
+
+
+def test_unverified_graph_source_mention_triggers_fallback() -> None:
+    generated = {
+        "headline": "Dự báo PM2.5",
+        "summary": "Cần kiểm tra công trường gần khu vực quan trắc.",
+        "contributing_conditions": ["Gió yếu có thể làm giảm khuếch tán."],
+        "sensitive_group_advice": "Nhóm nhạy cảm nên theo dõi cập nhật.",
+        "recommended_actions": ["Theo dõi dữ liệu tiếp theo."],
+        "uncertainty": "Đây là dự báo có sai số.",
+    }
+    client = GroqClient(
+        GroqConfig(api_key="test-key"),
+        http_client=httpx.Client(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200,
+                    json={
+                        "choices": [
+                            {"message": {"content": json.dumps(generated, ensure_ascii=False)}}
+                        ]
+                    },
+                )
+            )
+        ),
+    )
+    result = explain_forecast(_prediction(), 3, client=client)
+    assert result["generation"]["mode"] == "deterministic_fallback"
+    assert "công trường" not in result["explanation"]["summary"].lower()

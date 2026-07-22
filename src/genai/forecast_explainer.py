@@ -9,12 +9,19 @@ from typing import Any
 from src.assessment.who_pm25 import classify_hourly_forecast_proxy
 from src.genai.groq_client import GroqClient, GroqClientError
 from src.genai.guardrails import GuardrailViolation, validate_generated_explanation
+from src.genai.knowledge_graph import (
+    build_pm25_knowledge_context,
+    unsupported_emission_source_terms,
+)
 
 
 SYSTEM_PROMPT = """Bạn là trợ lý giải thích dự báo PM2.5 cho hệ thống hỗ trợ quyết định.
 Chỉ sử dụng JSON dữ liệu được cung cấp. Không tự tạo số liệu, nguồn phát thải hoặc tổ chức vi phạm.
 Phân biệt dữ kiện với suy luận. Không khẳng định quan hệ nhân quả; chỉ nói điều kiện "có thể góp phần".
 Chỉ sử dụng giao thông TomTom khi traffic.available=true và confidence đủ cao. Dữ liệu này chỉ đại diện đoạn đường gần điểm lấy mẫu, không đại diện toàn quận hoặc toàn thành phố.
+Knowledge Graph chỉ cung cấp kiến thức miền chung. Cạnh EMITS mô tả loại chất có thể được nguồn phát thải phát ra, không chứng minh nguồn gây ra sự kiện hiện tại.
+Chỉ nhắc nguồn phát thải khi nguồn đó nằm trong supported_emission_sources; không nhắc các nguồn trong unverified_emission_sources.
+Cạnh INFLUENCED_BY mô tả ảnh hưởng khí tượng, không phải kết luận nhân quả cho một giờ cụ thể. MITIGATED_BY là biện pháp quy hoạch hoặc chính sách, không phải hành động tự động và không bảo đảm hiệu quả tức thời.
 Không gọi dự báo PM2.5 theo giờ là AQI chính thức hoặc kết luận tuân thủ WHO.
 Nếu thiếu bằng chứng, phải nói rõ và đề xuất xác minh dữ liệu/cảm biến/hiện trường.
 Không tự động đề xuất hành động nguy hiểm. Khuyến nghị sức khỏe chỉ mang tính thận trọng chung.
@@ -59,6 +66,17 @@ def _condition_facts(measurements: dict[str, Any], delta: float) -> list[dict[st
                 "interpretation": "Gió yếu có thể làm giảm khả năng khuếch tán chất ô nhiễm; đây chưa phải bằng chứng nguyên nhân.",
             }
         )
+    elif wind is not None and wind >= 15:
+        facts.append(
+            {
+                "code": "dispersive_wind",
+                "evidence": f"Tốc độ gió hiện tại {wind:.1f} km/h.",
+                "interpretation": (
+                    "Gió ở mức cao hơn có thể hỗ trợ khuếch tán tại chỗ, nhưng cũng có thể vận chuyển "
+                    "ô nhiễm từ nơi khác nên chưa đủ để dự đoán PM2.5 sẽ giảm."
+                ),
+            }
+        )
     humidity = _number(measurements.get("humidity"))
     if humidity is not None and humidity >= 80:
         facts.append(
@@ -75,6 +93,17 @@ def _condition_facts(measurements: dict[str, Any], delta: float) -> list[dict[st
                 "code": "little_rain",
                 "evidence": f"Lượng mưa hiện tại {precipitation:.1f} mm.",
                 "interpretation": "Ít hoặc không mưa đồng nghĩa không có điều kiện rửa trôi rõ rệt; chưa chứng minh quan hệ nhân quả.",
+            }
+        )
+    elif precipitation is not None:
+        facts.append(
+            {
+                "code": "rain_present",
+                "evidence": f"Lượng mưa hiện tại {precipitation:.1f} mm.",
+                "interpretation": (
+                    "Mưa có thể hỗ trợ loại bỏ hạt khỏi không khí; hiệu quả thực tế còn phụ thuộc "
+                    "cường độ, thời gian mưa và vận chuyển khí quyển."
+                ),
             }
         )
     return facts
@@ -145,10 +174,26 @@ def build_forecast_context(
     screening = (prediction.get("forecast_screening_levels") or {}).get(horizon_key)
     if not isinstance(screening, dict):
         screening = classify_hourly_forecast_proxy(predicted_pm25)
+    level_code = screening.get("level_code")
+    if not isinstance(level_code, int):
+        level_code = int(classify_hourly_forecast_proxy(predicted_pm25)["level_code"])
     conditions = [
         *_condition_facts(measurements, delta),
         *_traffic_condition_facts(traffic),
     ]
+    knowledge_codes = {item["code"] for item in conditions}
+    for field, evidence_code in {
+        "wind_speed": "wind_observed",
+        "humidity": "humidity_observed",
+        "precipitation": "rain_observed",
+        "temperature": "temperature_observed",
+    }.items():
+        if _number(measurements.get(field)) is not None:
+            knowledge_codes.add(evidence_code)
+    knowledge_graph = build_pm25_knowledge_context(
+        knowledge_codes,
+        screening_level_code=level_code,
+    )
 
     supported_analysis = None
     cause_analysis = prediction.get("cause_analysis")
@@ -171,6 +216,7 @@ def build_forecast_context(
         "change_pm25": round(delta, 2),
         "unit": "µg/m³",
         "hourly_screening": {
+            "level_code": level_code,
             "label_vi": screening.get("project_label_vi"),
             "who_band_vi": screening.get("who_band_vi"),
             "screening_only": True,
@@ -190,6 +236,7 @@ def build_forecast_context(
         },
         "observed_conditions": conditions,
         "supported_cause_analysis": supported_analysis,
+        "knowledge_graph": knowledge_graph,
         "constraints": {
             "causal_claim_allowed": False,
             "official_aqi_claim_allowed": False,
@@ -213,13 +260,18 @@ def _fallback_explanation(context: dict[str, Any]) -> dict[str, Any]:
     conditions = [item["interpretation"] for item in context["observed_conditions"]]
     if not conditions:
         conditions = ["Chưa có đủ điều kiện quan trắc nổi bật để nêu giả thuyết đóng góp."]
-    level_code = classify_hourly_forecast_proxy(predicted)["level_code"]
+    level_code = int(context["hourly_screening"]["level_code"])
     if level_code <= 1:
         advice = "Nhóm nhạy cảm có thể sinh hoạt bình thường nhưng nên theo dõi cập nhật và triệu chứng cá nhân."
     elif level_code <= 3:
-        advice = "Trẻ em, người cao tuổi và người có bệnh tim hoặc hô hấp nên giảm gắng sức kéo dài ngoài trời nếu xuất hiện khó chịu."
+        advice = "Nhóm nhạy cảm nên giảm gắng sức kéo dài ngoài trời nếu xuất hiện khó chịu."
     else:
-        advice = "Trẻ em, người cao tuổi và người có bệnh tim hoặc hô hấp nên giảm hoạt động kéo dài hoặc gắng sức ngoài trời và theo dõi hướng dẫn chính thức."
+        advice = "Nhóm nhạy cảm nên giảm hoạt động kéo dài hoặc gắng sức ngoài trời và theo dõi hướng dẫn chính thức."
+    actions = [
+        "Theo dõi số đo quan trắc ở giờ tiếp theo và so sánh với dự báo.",
+        "Kiểm tra chất lượng dữ liệu cảm biến trước khi đưa ra quyết định vận hành.",
+        "Xác minh tại hiện trường nếu mức PM2.5 tiếp tục tăng hoặc xuất hiện cảnh báo bất thường.",
+    ]
     traffic_available = context.get("traffic", {}).get("available") is True
     traffic_limit = (
         " Dữ liệu TomTom chỉ phản ánh đoạn đường gần điểm lấy mẫu, không đại diện toàn khu vực."
@@ -234,14 +286,10 @@ def _fallback_explanation(context: dict[str, Any]) -> dict[str, Any]:
         ),
         "contributing_conditions": conditions,
         "sensitive_group_advice": advice,
-        "recommended_actions": [
-            "Theo dõi số đo quan trắc ở giờ tiếp theo và so sánh với dự báo.",
-            "Kiểm tra chất lượng dữ liệu cảm biến trước khi đưa ra quyết định vận hành.",
-            "Xác minh tại hiện trường nếu mức PM2.5 tiếp tục tăng hoặc xuất hiện cảnh báo bất thường.",
-        ],
+        "recommended_actions": actions,
         "uncertainty": (
             "Đây là dự báo ML và mức sàng lọc PM2.5 theo giờ, không phải AQI chính thức hoặc đánh giá tuân thủ WHO; "
-            "các điều kiện nêu trên không chứng minh nguyên nhân gây ô nhiễm."
+            "các điều kiện nêu trên và Knowledge Graph không chứng minh nguyên nhân gây ô nhiễm hoặc chẩn đoán sức khỏe."
             + traffic_limit
         ),
     }
@@ -252,8 +300,8 @@ def _prompt(context: dict[str, Any]) -> str:
         "headline": "tiêu đề ngắn",
         "summary": "giải thích dự báo, có giá trị hiện tại, dự báo và chân trời",
         "contributing_conditions": ["các điều kiện có bằng chứng; không gọi là nguyên nhân"],
-        "sensitive_group_advice": "khuyến nghị thận trọng chung",
-        "recommended_actions": ["hành động xác minh an toàn"],
+        "sensitive_group_advice": "khuyến nghị sức khỏe thận trọng ở mức chung, không chẩn đoán",
+        "recommended_actions": ["hành động theo dõi và xác minh an toàn; không biến biện pháp quy hoạch MITIGATED_BY thành hành động tự động"],
         "uncertainty": "giới hạn của ML, mức theo giờ và suy luận",
     }
     return (
@@ -309,6 +357,7 @@ def explain_forecast(
             explanation = validate_generated_explanation(
                 generated,
                 allowed_numbers=allowed_numbers,
+                forbidden_terms=unsupported_emission_source_terms(context["knowledge_graph"]),
             )
             generation_mode = "groq"
             provider_model = groq.config.model
@@ -336,6 +385,7 @@ def explain_forecast(
             "observed_conditions": context["observed_conditions"],
             "traffic": context["traffic"],
             "supported_cause_analysis": context["supported_cause_analysis"],
+            "knowledge_graph": context["knowledge_graph"],
             "causal_claim_allowed": False,
             "official_aqi_claim_allowed": False,
         },

@@ -55,6 +55,17 @@ class FakeEnvironmentApi:
                     "generation": {"mode": "deterministic_fallback"},
                 },
             }
+        if path == "/knowledge-graph/pm25":
+            return {
+                "status": "ok",
+                "graph": {
+                    "graph_id": "pm25-domain-knowledge-v1",
+                    "relation_filter": params.get("relation") if params else None,
+                    "nodes": [{"id": "pm25", "label_vi": "PM2.5"}],
+                    "edges": [],
+                    "sources": [],
+                },
+            }
         if path == "/news":
             return {
                 "source": {"name": "Môi Trường Thủ Đô", "url": "https://moitruongthudo.vn/thong-tin"},
@@ -120,6 +131,9 @@ def test_dashboard_page_has_required_sections() -> None:
     assert "syncHourlyUpdateStatus" in script
     assert "30_000" in script
     assert "nextBrowserHourlyRefresh" in script
+    assert "function renderKnowledgeGraph" in script
+    assert "Knowledge Graph PM2.5" in html
+    assert 'href="/knowledge-graph"' in html
 
 
 def test_dashboard_snapshot_aggregates_backend_calls() -> None:
@@ -175,6 +189,40 @@ def test_news_page_and_proxy_are_available_and_source_attributed() -> None:
     assert client.get("/api/news?page=zero").status_code == 400
 
 
+def test_interactive_knowledge_graph_page_is_available() -> None:
+    client = create_app(api_client=FakeEnvironmentApi(), testing=True).test_client()
+    response = client.get("/knowledge-graph")
+    assert response.status_code == 200
+    html = response.get_data(as_text=True)
+    for required in [
+        "Đồ thị tri thức <em>không khí đô thị</em>",
+        'id="kg-network"',
+        'id="kg-search-input"',
+        'data-relation="EMITS"',
+        'data-relation="INFLUENCED_BY"',
+        'data-relation="MITIGATED_BY"',
+        'id="kg-inspector"',
+    ]:
+        assert required in html
+    assert "css/knowledge_graph.css" in html
+    assert "js/knowledge_graph.js" in html
+
+    script = client.get("/static/js/knowledge_graph.js").get_data(as_text=True)
+    css = client.get("/static/css/knowledge_graph.css").get_data(as_text=True)
+    for interaction in [
+        "function fitGraph",
+        "function zoomBy",
+        "setPointerCapture",
+        'apiFetch("/api/knowledge-graph/pm25")',
+        "selectNode",
+        "selectEdge",
+    ]:
+        assert interaction in script
+    assert ".kg-node.emission-source" in css
+    assert ".kg-edge.emits" in css
+    assert "touch-action: none" in css
+
+
 def test_dashboard_report_validates_and_proxies() -> None:
     fake = FakeEnvironmentApi()
     client = create_app(api_client=fake, testing=True).test_client()
@@ -223,6 +271,24 @@ def test_dashboard_forecast_explanation_validates_and_proxies() -> None:
     assert call["json"] == {"station_id": "ST_A", "horizon_hours": 3, "use_llm": True}
     assert client.post(
         "/api/forecast-explanation", json={"station_id": "ST_A", "horizon_hours": 2}
+    ).status_code == 400
+
+
+def test_dashboard_knowledge_graph_proxy_validates_relation() -> None:
+    fake = FakeEnvironmentApi()
+    client = create_app(api_client=fake, testing=True).test_client()
+    response = client.get("/api/knowledge-graph/pm25?relation=emits")
+    assert response.status_code == 200
+    assert response.get_json()["graph"]["relation_filter"] == "EMITS"
+    call = fake.calls[-1]
+    assert call == {
+        "method": "GET",
+        "path": "/knowledge-graph/pm25",
+        "params": {"relation": "EMITS"},
+        "json": None,
+    }
+    assert client.get(
+        "/api/knowledge-graph/pm25?relation=unsupported"
     ).status_code == 400
 
 
