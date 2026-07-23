@@ -6,7 +6,13 @@ import re
 from typing import Any, Iterable
 
 
-REQUIRED_TEXT_FIELDS = ("headline", "summary", "sensitive_group_advice", "uncertainty")
+REQUIRED_TEXT_FIELDS = (
+    "headline",
+    "summary",
+    "overall_interpretation",
+    "sensitive_group_advice",
+    "uncertainty",
+)
 REQUIRED_LIST_FIELDS = ("contributing_conditions", "recommended_actions")
 FORBIDDEN_CLAIMS = (
     re.compile(r"\bnguyên nhân (?:chính |trực tiếp |duy nhất )?là\b", re.IGNORECASE),
@@ -50,6 +56,10 @@ def validate_generated_explanation(
         value = payload.get(field)
         if not isinstance(value, list) or not 1 <= len(value) <= 6:
             raise GuardrailViolation(f"Invalid generated list: {field}")
+        if field == "recommended_actions" and len(value) != 3:
+            raise GuardrailViolation(
+                "Generated recommendations must contain exactly three priorities"
+            )
         if any(not isinstance(item, str) or not item.strip() or len(item) > 400 for item in value):
             raise GuardrailViolation(f"Invalid generated list item: {field}")
 
@@ -83,6 +93,7 @@ def validate_generated_explanation(
     return {
         "headline": payload["headline"].strip(),
         "summary": payload["summary"].strip(),
+        "overall_interpretation": payload["overall_interpretation"].strip(),
         "contributing_conditions": [item.strip() for item in payload["contributing_conditions"]],
         "sensitive_group_advice": payload["sensitive_group_advice"].strip(),
         "recommended_actions": [item.strip() for item in payload["recommended_actions"]],

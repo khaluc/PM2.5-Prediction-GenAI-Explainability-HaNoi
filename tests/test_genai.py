@@ -46,6 +46,8 @@ def test_context_distinguishes_observed_conditions_from_causes() -> None:
     context = build_forecast_context(_prediction(), 3, traffic=_traffic())
     assert context["predicted_pm25"] == 72.0
     assert context["change_pm25"] == 15.4
+    assert context["trend_assessment"]["code"] == "clear_rise"
+    assert context["health_guidance"]["scope_vi"]
     assert context["hourly_screening"]["screening_only"] is True
     assert context["constraints"]["causal_claim_allowed"] is False
     codes = {item["code"] for item in context["observed_conditions"]}
@@ -96,11 +98,19 @@ def test_valid_grounded_dashscope_json_is_used() -> None:
     generated = {
         "headline": "PM2.5 +3 giờ: 72.0 µg/m³",
         "summary": "Mô hình dự báo PM2.5 tăng từ 56.6 lên 72.0 µg/m³ sau 3 giờ.",
+        "overall_interpretation": (
+            "Mức tăng cần được theo dõi cùng gió, độ ẩm và số đo quan trắc tiếp theo; "
+            "các điều kiện hiện tại chưa chứng minh nguyên nhân."
+        ),
         "contributing_conditions": [
             "Gió yếu và độ ẩm cao có thể góp phần, nhưng chưa chứng minh nguyên nhân."
         ],
         "sensitive_group_advice": "Nhóm nhạy cảm nên giảm gắng sức kéo dài ngoài trời.",
-        "recommended_actions": ["Theo dõi quan trắc tiếp theo và kiểm tra cảm biến."],
+        "recommended_actions": [
+            "Ưu tiên ngay: theo dõi quan trắc tiếp theo.",
+            "Xác minh khi cần: kiểm tra cảm biến nếu số đo lệch dự báo.",
+            "Dài hạn: đánh giá biện pháp quy hoạch phù hợp địa điểm.",
+        ],
         "uncertainty": "Đây là mức sàng lọc theo giờ, không phải AQI chính thức.",
     }
 
@@ -113,6 +123,8 @@ def test_valid_grounded_dashscope_json_is_used() -> None:
         assert body["response_format"] == {"type": "json_object"}
         assert "knowledge_graph" in body["messages"][1]["content"]
         assert "unverified_emission_sources" in body["messages"][1]["content"]
+        assert "overall_interpretation" in body["messages"][1]["content"]
+        assert "recommended_actions phải có đúng ba mục" in body["messages"][1]["content"]
         return httpx.Response(
             200,
             json={"choices": [{"message": {"content": json.dumps(generated, ensure_ascii=False)}}]},
@@ -129,23 +141,39 @@ def test_valid_grounded_dashscope_json_is_used() -> None:
         "fallback_reason": None,
     }
     assert result["explanation"]["headline"] == generated["headline"]
+    assert result["explanation"]["overall_interpretation"] == generated[
+        "overall_interpretation"
+    ]
 
 
 def test_guardrail_retries_once_with_a_repair_prompt() -> None:
     invalid = {
         "headline": "PM2.5 forecast",
         "summary": "Unsupported measurement: 999.",
+        "overall_interpretation": "Observed conditions do not prove causality.",
         "contributing_conditions": ["Observed conditions require verification."],
         "sensitive_group_advice": "Sensitive groups should monitor updates.",
-        "recommended_actions": ["Continue monitoring observations."],
+        "recommended_actions": [
+            "Monitor the next observation.",
+            "Verify the sensor when necessary.",
+            "Assess long-term planning separately.",
+        ],
         "uncertainty": "This is an hourly screening forecast.",
     }
     valid = {
         "headline": "PM2.5 forecast",
         "summary": "The forecast changes from 56.6 to 72.0 after 3 hours.",
+        "overall_interpretation": (
+            "Observed conditions may act in different directions, so the dominant "
+            "factor cannot be identified from current evidence."
+        ),
         "contributing_conditions": ["Observed conditions may contribute."],
         "sensitive_group_advice": "Sensitive groups should monitor updates.",
-        "recommended_actions": ["Continue monitoring observations."],
+        "recommended_actions": [
+            "Monitor the next observation.",
+            "Verify the sensor when necessary.",
+            "Assess long-term planning separately.",
+        ],
         "uncertainty": "This is an hourly screening forecast.",
     }
     calls: list[dict] = []
@@ -179,9 +207,17 @@ def test_dashscope_may_use_one_decimal_rounding_of_grounded_values() -> None:
     generated = {
         "headline": "PM2.5 forecast: 72.0",
         "summary": "The forecast changes from 56.6 to 72.0 after 3 hours.",
+        "overall_interpretation": (
+            "Observed conditions may act in different directions and require "
+            "confirmation from the next observation."
+        ),
         "contributing_conditions": ["Observed conditions may contribute."],
         "sensitive_group_advice": "Sensitive groups should monitor updates.",
-        "recommended_actions": ["Continue monitoring observations."],
+        "recommended_actions": [
+            "Monitor the next observation.",
+            "Verify the sensor when necessary.",
+            "Assess long-term planning separately.",
+        ],
         "uncertainty": "This is an hourly screening forecast.",
     }
     client = DashScopeClient(
@@ -217,9 +253,14 @@ def test_unsupported_dashscope_claim_or_number_triggers_fallback() -> None:
     generated = {
         "headline": "Dự báo PM2.5",
         "summary": "Nguyên nhân chính là nhà máy gây ô nhiễm 999 µg/m³.",
+        "overall_interpretation": "Nhà máy chắc chắn gây ra mức ô nhiễm hiện tại.",
         "contributing_conditions": ["Chắc chắn do nguồn phát thải."],
         "sensitive_group_advice": "Ở trong nhà.",
-        "recommended_actions": ["Theo dõi dữ liệu."],
+        "recommended_actions": [
+            "Theo dõi dữ liệu.",
+            "Kiểm tra cảm biến.",
+            "Đánh giá biện pháp dài hạn.",
+        ],
         "uncertainty": "Không có.",
     }
     transport = httpx.MockTransport(
@@ -242,9 +283,16 @@ def test_unverified_graph_source_mention_triggers_fallback() -> None:
     generated = {
         "headline": "Dự báo PM2.5",
         "summary": "Cần kiểm tra công trường gần khu vực quan trắc.",
+        "overall_interpretation": (
+            "Công trường được xem là nguồn cần xác minh dù chưa có bằng chứng hiện tại."
+        ),
         "contributing_conditions": ["Gió yếu có thể làm giảm khuếch tán."],
         "sensitive_group_advice": "Nhóm nhạy cảm nên theo dõi cập nhật.",
-        "recommended_actions": ["Theo dõi dữ liệu tiếp theo."],
+        "recommended_actions": [
+            "Theo dõi dữ liệu tiếp theo.",
+            "Kiểm tra cảm biến khi cần.",
+            "Đánh giá biện pháp dài hạn.",
+        ],
         "uncertainty": "Đây là dự báo có sai số.",
     }
     client = DashScopeClient(

@@ -38,6 +38,65 @@ def _number(value: Any) -> float | None:
     return number if number >= 0 else None
 
 
+def _trend_assessment(delta: float) -> dict[str, str]:
+    if delta >= 5:
+        return {
+            "code": "clear_rise",
+            "label_vi": "xu hướng tăng rõ",
+            "interpretation_vi": (
+                "Mức dự báo tăng đủ lớn để ưu tiên theo dõi lần quan trắc tiếp theo."
+            ),
+        }
+    if delta <= -5:
+        return {
+            "code": "clear_fall",
+            "label_vi": "xu hướng giảm rõ",
+            "interpretation_vi": (
+                "Mô hình cho thấy mức giảm đáng chú ý nhưng vẫn cần quan trắc xác nhận."
+            ),
+        }
+    if abs(delta) < 1:
+        return {
+            "code": "stable",
+            "label_vi": "gần như ổn định",
+            "interpretation_vi": (
+                "Chênh lệch dự báo nhỏ nên chưa cho thấy biến động rõ rệt trong chân trời đã chọn."
+            ),
+        }
+    return {
+        "code": "small_change",
+        "label_vi": "thay đổi nhẹ",
+        "interpretation_vi": (
+            "Mô hình dự báo có thay đổi nhưng biên độ chưa đủ để xem là một xu hướng mạnh."
+        ),
+    }
+
+
+def _screening_health_guidance(level_code: int) -> dict[str, str]:
+    if level_code <= 1:
+        advice = (
+            "Nhóm nhạy cảm có thể duy trì sinh hoạt bình thường, đồng thời theo dõi "
+            "cập nhật và phản ứng sức khỏe cá nhân."
+        )
+    elif level_code <= 3:
+        advice = (
+            "Nhóm nhạy cảm nên giảm gắng sức kéo dài ngoài trời nếu xuất hiện khó chịu "
+            "và theo dõi các cập nhật tiếp theo."
+        )
+    else:
+        advice = (
+            "Nhóm nhạy cảm nên giảm hoạt động kéo dài hoặc gắng sức ngoài trời và "
+            "theo dõi hướng dẫn chính thức."
+        )
+    return {
+        "advice_vi": advice,
+        "scope_vi": (
+            "Đây là khuyến nghị thận trọng theo mức sàng lọc của dự án, không phải "
+            "chẩn đoán y tế hoặc hướng dẫn AQI chính thức."
+        ),
+    }
+
+
 def _condition_facts(measurements: dict[str, Any], delta: float) -> list[dict[str, str]]:
     facts: list[dict[str, str]] = []
     if delta >= 5:
@@ -154,6 +213,44 @@ def _traffic_condition_facts(traffic: dict[str, Any] | None) -> list[dict[str, s
     return facts
 
 
+def _fallback_overall_interpretation(context: dict[str, Any]) -> str:
+    trend = context["trend_assessment"]["interpretation_vi"]
+    codes = {
+        item.get("code")
+        for item in context.get("observed_conditions", [])
+        if isinstance(item, dict)
+    }
+    accumulation_signals = codes & {
+        "low_wind",
+        "high_humidity",
+        "traffic_congestion",
+    }
+    removal_signals = codes & {"rain_present", "dispersive_wind"}
+    if accumulation_signals and removal_signals:
+        balance = (
+            "Các điều kiện quan sát đang cho tín hiệu theo nhiều hướng: một số điều kiện "
+            "có thể hạn chế khuếch tán hoặc đi kèm phát thải, trong khi mưa hoặc gió có "
+            "thể hỗ trợ làm sạch hay phân tán tại chỗ. Dữ liệu hiện có chưa định lượng "
+            "được yếu tố nào chiếm ưu thế."
+        )
+    elif accumulation_signals:
+        balance = (
+            "Một số điều kiện quan sát có thể đi kèm khả năng tích tụ hoặc phát thải cao "
+            "hơn, nhưng chưa đủ bằng chứng để xác định nguyên nhân hay mức đóng góp."
+        )
+    elif removal_signals:
+        balance = (
+            "Mưa hoặc gió có thể hỗ trợ loại bỏ hay khuếch tán hạt tại chỗ, nhưng hiệu "
+            "quả cần được xác nhận bằng số đo PM2.5 ở những giờ tiếp theo."
+        )
+    else:
+        balance = (
+            "Chưa có tín hiệu quan trắc nổi bật để giải thích biến động; cần tiếp tục "
+            "đối chiếu dự báo với số đo mới."
+        )
+    return f"{trend} {balance}"
+
+
 def build_forecast_context(
     prediction: dict[str, Any],
     horizon_hours: int,
@@ -215,6 +312,7 @@ def build_forecast_context(
         "predicted_pm25": round(predicted_pm25, 2),
         "change_pm25": round(delta, 2),
         "unit": "µg/m³",
+        "trend_assessment": _trend_assessment(delta),
         "hourly_screening": {
             "level_code": level_code,
             "label_vi": screening.get("project_label_vi"),
@@ -222,6 +320,7 @@ def build_forecast_context(
             "screening_only": True,
             "note_vi": screening.get("note_vi"),
         },
+        "health_guidance": _screening_health_guidance(level_code),
         "weather": {
             key: measurements.get(key)
             for key in ("temperature", "humidity", "wind_speed", "precipitation")
@@ -257,20 +356,27 @@ def _fallback_explanation(context: dict[str, Any]) -> dict[str, Any]:
         trend = "giảm"
     else:
         trend = "ít thay đổi"
-    conditions = [item["interpretation"] for item in context["observed_conditions"]]
+    conditions = [
+        f'{item["evidence"]} {item["interpretation"]}'
+        for item in context["observed_conditions"]
+    ]
     if not conditions:
         conditions = ["Chưa có đủ điều kiện quan trắc nổi bật để nêu giả thuyết đóng góp."]
-    level_code = int(context["hourly_screening"]["level_code"])
-    if level_code <= 1:
-        advice = "Nhóm nhạy cảm có thể sinh hoạt bình thường nhưng nên theo dõi cập nhật và triệu chứng cá nhân."
-    elif level_code <= 3:
-        advice = "Nhóm nhạy cảm nên giảm gắng sức kéo dài ngoài trời nếu xuất hiện khó chịu."
-    else:
-        advice = "Nhóm nhạy cảm nên giảm hoạt động kéo dài hoặc gắng sức ngoài trời và theo dõi hướng dẫn chính thức."
+    health_guidance = context["health_guidance"]
+    advice = f'{health_guidance["advice_vi"]} {health_guidance["scope_vi"]}'
     actions = [
-        "Theo dõi số đo quan trắc ở giờ tiếp theo và so sánh với dự báo.",
-        "Kiểm tra chất lượng dữ liệu cảm biến trước khi đưa ra quyết định vận hành.",
-        "Xác minh tại hiện trường nếu mức PM2.5 tiếp tục tăng hoặc xuất hiện cảnh báo bất thường.",
+        (
+            "Ưu tiên ngay: theo dõi số đo quan trắc ở giờ tiếp theo và so sánh với dự báo "
+            "để biết xu hướng có tiếp tục hay không."
+        ),
+        (
+            "Xác minh khi cần: kiểm tra chất lượng cảm biến và điều kiện hiện trường nếu "
+            "số đo mới lệch đáng kể với dự báo hoặc xuất hiện cảnh báo bất thường."
+        ),
+        (
+            "Dài hạn: chỉ xem các biện pháp trong Knowledge Graph là định hướng quy hoạch; "
+            "cần đánh giá theo địa điểm vì chúng không xử lý tức thời một giờ ô nhiễm."
+        ),
     ]
     traffic_available = context.get("traffic", {}).get("available") is True
     traffic_limit = (
@@ -282,8 +388,10 @@ def _fallback_explanation(context: dict[str, Any]) -> dict[str, Any]:
         "headline": f"PM2.5 dự báo +{horizon} giờ: {predicted:.1f} µg/m³",
         "summary": (
             f"Mô hình dự báo PM2.5 {trend} từ {current:.1f} lên {predicted:.1f} µg/m³ sau {horizon} giờ. "
-            f"Giá trị này thuộc mức sàng lọc “{label}”."
+            f"Giá trị này thuộc mức sàng lọc “{label}”. "
+            f'{context["trend_assessment"]["interpretation_vi"]}'
         ),
+        "overall_interpretation": _fallback_overall_interpretation(context),
         "contributing_conditions": conditions,
         "sensitive_group_advice": advice,
         "recommended_actions": actions,
@@ -297,15 +405,43 @@ def _fallback_explanation(context: dict[str, Any]) -> dict[str, Any]:
 
 def _prompt(context: dict[str, Any]) -> str:
     schema = {
-        "headline": "tiêu đề ngắn",
-        "summary": "giải thích dự báo, có giá trị hiện tại, dự báo và chân trời",
-        "contributing_conditions": ["các điều kiện có bằng chứng; không gọi là nguyên nhân"],
-        "sensitive_group_advice": "khuyến nghị sức khỏe thận trọng ở mức chung, không chẩn đoán",
-        "recommended_actions": ["hành động theo dõi và xác minh an toàn; không biến biện pháp quy hoạch MITIGATED_BY thành hành động tự động"],
-        "uncertainty": "giới hạn của ML, mức theo giờ và suy luận",
+        "headline": "một câu ngắn nêu xu hướng và giá trị dự báo",
+        "summary": (
+            "ba đến bốn câu: mô tả giá trị hiện tại, dự báo, mức thay đổi, ý nghĩa "
+            "của trend_assessment và mức sàng lọc; không lặp nguyên văn headline"
+        ),
+        "overall_interpretation": (
+            "hai đến ba câu tổng hợp các điều kiện đang cùng chiều hoặc ngược chiều, "
+            "nêu điều có thể giải thích và điều chưa thể kết luận; không chỉ liệt kê lại dữ liệu"
+        ),
+        "contributing_conditions": [
+            (
+                "mỗi phần tử gồm bằng chứng quan sát, cơ chế hoặc hướng ảnh hưởng có thể "
+                "xảy ra, và giới hạn suy luận; không gọi là nguyên nhân"
+            )
+        ],
+        "sensitive_group_advice": (
+            "hai câu, bám sát health_guidance và không khuyến cáo nghiêm ngặt hơn dữ liệu cho phép"
+        ),
+        "recommended_actions": [
+            "Ưu tiên ngay: hành động theo dõi kèm mục đích",
+            "Xác minh khi cần: điều kiện kích hoạt việc kiểm tra cảm biến hoặc hiện trường",
+            "Dài hạn: biện pháp phù hợp từ Knowledge Graph và giới hạn hiệu quả tức thời",
+        ],
+        "uncertainty": (
+            "hai đến ba câu về sai số ML, phạm vi dữ liệu TomTom, giới hạn nhân quả "
+            "và việc đây không phải AQI chính thức"
+        ),
     }
     return (
-        "Hãy tạo JSON giải thích dự báo theo đúng schema sau. Mọi số trong câu trả lời phải có trong dữ liệu.\n"
+        "Hãy tạo JSON giải thích dự báo theo đúng schema sau. Mọi số trong câu trả lời "
+        "phải có trong dữ liệu. Diễn giải mạch lạc và cụ thể cho trường hợp hiện tại, "
+        "không chỉ đổi cách viết hoặc liệt kê lại DATA_JSON. Phải giải thích vì sao "
+        "mức thay đổi được xem là ổn định, nhẹ hoặc rõ dựa trên trend_assessment. "
+        "Khi có cả điều kiện hỗ trợ tích tụ và điều kiện hỗ trợ loại bỏ hoặc khuếch tán, "
+        "hãy nói rõ chúng có thể tác động theo các hướng khác nhau và chưa biết yếu tố "
+        "nào chiếm ưu thế. recommended_actions phải có đúng ba mục theo thứ tự ưu tiên "
+        "ngay, xác minh khi cần và dài hạn.\n"
         f"SCHEMA_JSON={json.dumps(schema, ensure_ascii=False)}\n"
         f"DATA_JSON={json.dumps(context, ensure_ascii=False, default=str)}"
     )

@@ -565,6 +565,12 @@ function renderForecastExplanation(payload) {
   header.append(title, mode);
 
   const summary = document.createElement("p"); summary.className = "genai-summary"; summary.textContent = explanation.summary || "Không có nội dung giải thích.";
+  const interpretation = document.createElement("div"); interpretation.className = "genai-interpretation";
+  const interpretationTitle = document.createElement("h4"); interpretationTitle.textContent = "Nhận định tổng hợp";
+  const interpretationText = document.createElement("p");
+  interpretationText.textContent = explanation.overall_interpretation
+    || "Chưa có đủ dữ liệu để tổng hợp mối liên hệ giữa các điều kiện quan sát.";
+  interpretation.append(interpretationTitle, interpretationText);
   const columns = document.createElement("div"); columns.className = "genai-columns";
   const conditionBlock = document.createElement("div");
   const conditionTitle = document.createElement("h4"); conditionTitle.textContent = "Điều kiện có thể góp phần";
@@ -583,7 +589,7 @@ function renderForecastExplanation(payload) {
   const facts = document.createElement("span"); facts.textContent = `${forecast.model || "ML"} · +${forecast.horizon_hours || "—"}h · ${formatNumber(forecast.predicted_pm25)} µg/m³`;
   footer.append(uncertainty, facts);
   const knowledgeGraph = renderKnowledgeGraph(result.grounding?.knowledge_graph);
-  container.append(header, summary, columns);
+  container.append(header, summary, interpretation, columns);
   if (knowledgeGraph) container.append(knowledgeGraph);
   container.append(footer);
 }

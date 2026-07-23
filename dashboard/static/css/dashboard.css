@@ -239,6 +239,9 @@ button, select { cursor: pointer; }
 .generation-mode.live { color: #0d655d; background: #dff4f0; }
 .generation-mode.fallback { color: #745915; background: #fff2c9; }
 .genai-summary { margin: 9px 0 0; color: #34434f; font-size: 11px; font-weight: 650; }
+.genai-interpretation { margin-top: 12px; padding: 11px 13px; border-left: 3px solid var(--brand); border-radius: 0 8px 8px 0; background: #f2f8f6; }
+.genai-interpretation h4 { margin: 0 0 5px; color: var(--brand-dark); font-size: 9px; text-transform: uppercase; letter-spacing: .07em; }
+.genai-interpretation p { margin: 0; color: #40525d; font-size: 10px; line-height: 1.55; }
 .genai-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
 .genai-columns h4 { margin: 0 0 7px; color: var(--brand-dark); font-size: 10px; text-transform: uppercase; letter-spacing: .07em; }
 .genai-columns p, .genai-columns li { color: #586673; font-size: 9px; }
