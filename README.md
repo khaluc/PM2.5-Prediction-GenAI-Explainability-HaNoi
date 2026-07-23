@@ -13,7 +13,7 @@ cảnh báo và tạo báo cáo vận hành.
 - `src/preprocessing/`: làm sạch và tạo feature chuỗi thời gian.
 - `src/models/`: huấn luyện, dự báo và phát hiện bất thường.
 - `src/analysis/`: phân tích giả thuyết nguyên nhân dựa trên dữ liệu.
-- `src/genai/`: giải thích dự báo ML bằng Groq GPT-OSS với guardrail và chế độ dự phòng.
+- `src/genai/`: giải thích dự báo ML bằng DeepSeek V4 trên DashScope với guardrail và chế độ dự phòng.
 - `src/alerts/`: tạo, chống trùng và xác nhận cảnh báo.
 - `src/database/`: schema SQLAlchemy, repository PostgreSQL và writer idempotent.
 - `src/services/`: repository dữ liệu, inference và báo cáo.
@@ -37,15 +37,17 @@ Biến môi trường cần thiết khi thu thập giao thông:
 TOMTOM_API_KEY=...
 ```
 
-Để bật Groq cho chức năng giải thích dự báo, thêm vào `.env`:
+Để bật DeepSeek V4 Flash qua DashScope International, thêm vào `.env`:
 
 ```dotenv
-GROQ_API_KEY=...
-GROQ_MODEL=openai/gpt-oss-120b
-GROQ_BASE_URL=https://api.groq.com/openai/v1
+DASHSCOPE_API_KEY=...
+DASHSCOPE_MODEL=deepseek-v4-flash
+DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+DASHSCOPE_THINKING_ENABLED=false
 ```
 
-Nếu chưa cấu hình key hoặc Groq trả dữ liệu không qua guardrail, API vẫn trả bản giải
+Thinking phải tắt vì DashScope không cho dùng `enable_thinking=true` cùng JSON mode.
+Nếu chưa cấu hình key hoặc DashScope trả dữ liệu không qua guardrail, API vẫn trả bản giải
 thích xác định sẵn và ghi `generation.mode=deterministic_fallback`.
 
 ## Thu thập dữ liệu live
@@ -208,7 +210,7 @@ nguồn tham chiếu:
 - `MITIGATED_BY`: trồng cây, vùng phát thải thấp và giao thông công cộng là các
   biện pháp quy hoạch/chính sách giảm nhẹ.
 
-Graph được liên kết với dữ liệu hiện tại trước khi gửi cho Groq. Ví dụ, nút phát
+Graph được liên kết với dữ liệu hiện tại trước khi gửi cho DeepSeek qua DashScope. Ví dụ, nút phát
 thải phương tiện chỉ được đánh dấu có tín hiệu hỗ trợ khi TomTom ghi nhận ùn tắc với
 độ tin cậy đủ; nhà máy và xây dựng không được đưa vào lời giải thích nếu chưa có dữ
 liệu xác minh tương ứng. Có thể kiểm tra graph độc lập:

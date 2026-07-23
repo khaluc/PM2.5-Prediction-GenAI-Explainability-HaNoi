@@ -32,7 +32,7 @@ nano .env.production
 bash deploy/aws/deploy.sh
 ```
 
-Bắt buộc điền `POSTGRES_PASSWORD`, `TOMTOM_API_KEY` và `GROQ_API_KEY`.
+Bắt buộc điền `POSTGRES_PASSWORD`, `TOMTOM_API_KEY` và `DASHSCOPE_API_KEY`.
 Không commit hoặc đưa `.env.production` vào Docker image.
 
 Kiểm tra:

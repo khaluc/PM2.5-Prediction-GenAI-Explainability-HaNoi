@@ -20,12 +20,13 @@ cp "$EXAMPLE_ENV" "$TARGET_ENV"
 
 allowed_keys=(
   TOMTOM_API_KEY
-  GROQ_API_KEY
-  GROQ_BASE_URL
-  GROQ_MODEL
-  GROQ_TIMEOUT_SECONDS
-  GROQ_MAX_OUTPUT_TOKENS
-  GROQ_TEMPERATURE
+  DASHSCOPE_API_KEY
+  DASHSCOPE_BASE_URL
+  DASHSCOPE_MODEL
+  DASHSCOPE_TIMEOUT_SECONDS
+  DASHSCOPE_MAX_OUTPUT_TOKENS
+  DASHSCOPE_TEMPERATURE
+  DASHSCOPE_THINKING_ENABLED
 )
 
 for key in "${allowed_keys[@]}"; do
@@ -40,7 +41,7 @@ postgres_password="$(openssl rand -hex 32)"
 sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${postgres_password}/" "$TARGET_ENV"
 chmod 600 "$TARGET_ENV"
 
-for required_key in POSTGRES_PASSWORD TOMTOM_API_KEY GROQ_API_KEY; do
+for required_key in POSTGRES_PASSWORD TOMTOM_API_KEY DASHSCOPE_API_KEY; do
   if ! grep -q "^${required_key}=." "$TARGET_ENV"; then
     echo "Missing required value: $required_key" >&2
     exit 1

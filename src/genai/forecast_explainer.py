@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from src.assessment.who_pm25 import classify_hourly_forecast_proxy
-from src.genai.groq_client import GroqClient, GroqClientError
+from src.genai.dashscope_client import DashScopeClient, DashScopeClientError
 from src.genai.guardrails import GuardrailViolation, validate_generated_explanation
 from src.genai.knowledge_graph import (
     build_pm25_knowledge_context,
@@ -332,10 +332,10 @@ def explain_forecast(
     horizon_hours: int,
     *,
     use_llm: bool = True,
-    client: GroqClient | None = None,
+    client: DashScopeClient | None = None,
     traffic: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Explain one forecast with Groq, falling back to deterministic safe text."""
+    """Explain one forecast with DeepSeek on DashScope and a safe fallback."""
     context = build_forecast_context(
         prediction,
         horizon_hours,
@@ -344,25 +344,52 @@ def explain_forecast(
     fallback = _fallback_explanation(context)
     generation_mode = "deterministic_fallback"
     provider_model = None
-    fallback_reason = "llm_disabled" if not use_llm else "groq_not_configured"
+    fallback_reason = "llm_disabled" if not use_llm else "dashscope_not_configured"
 
-    groq = client or GroqClient()
-    if use_llm and groq.available:
+    dashscope = client or DashScopeClient()
+    if use_llm and dashscope.available:
         try:
-            generated = groq.generate_json(
+            generated = dashscope.generate_json(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=_prompt(context),
             )
-            allowed_numbers = [2.5, 24, *_grounded_numbers(context)]
-            explanation = validate_generated_explanation(
-                generated,
-                allowed_numbers=allowed_numbers,
-                forbidden_terms=unsupported_emission_source_terms(context["knowledge_graph"]),
+            grounded_numbers = _grounded_numbers(context)
+            allowed_numbers = [
+                2.5,
+                24,
+                *grounded_numbers,
+                *(round(number, 1) for number in grounded_numbers),
+            ]
+            forbidden_terms = unsupported_emission_source_terms(
+                context["knowledge_graph"]
             )
-            generation_mode = "groq"
-            provider_model = groq.config.model
+            try:
+                explanation = validate_generated_explanation(
+                    generated,
+                    allowed_numbers=allowed_numbers,
+                    forbidden_terms=forbidden_terms,
+                )
+            except GuardrailViolation as error:
+                repair_prompt = (
+                    f"{_prompt(context)}\n\n"
+                    "Lần trả lời trước bị bộ kiểm soát từ chối với lý do: "
+                    f"{error}. Hãy tạo lại JSON đúng schema, không thêm dữ kiện, "
+                    "số liệu, nguồn phát thải hoặc khẳng định nhân quả ngoài "
+                    "context."
+                )
+                generated = dashscope.generate_json(
+                    system_prompt=SYSTEM_PROMPT,
+                    user_prompt=repair_prompt,
+                )
+                explanation = validate_generated_explanation(
+                    generated,
+                    allowed_numbers=allowed_numbers,
+                    forbidden_terms=forbidden_terms,
+                )
+            generation_mode = "dashscope"
+            provider_model = dashscope.config.model
             fallback_reason = None
-        except (GroqClientError, GuardrailViolation, ValueError, TypeError):
+        except (DashScopeClientError, GuardrailViolation, ValueError, TypeError):
             explanation = fallback
             fallback_reason = "provider_or_guardrail_failure"
     else:

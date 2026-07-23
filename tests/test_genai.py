@@ -7,7 +7,7 @@ import json
 import httpx
 
 from src.genai.forecast_explainer import build_forecast_context, explain_forecast
-from src.genai.groq_client import GroqClient, GroqConfig
+from src.genai.dashscope_client import DashScopeClient, DashScopeConfig
 
 
 def _prediction() -> dict:
@@ -77,8 +77,8 @@ def test_low_confidence_traffic_is_not_used_as_contributing_condition() -> None:
     assert context["traffic"]["available"] is True
 
 
-def test_explanation_falls_back_safely_without_groq_key() -> None:
-    client = GroqClient(GroqConfig(api_key=""))
+def test_explanation_falls_back_safely_without_dashscope_key() -> None:
+    client = DashScopeClient(DashScopeConfig(api_key=""))
     result = explain_forecast(_prediction(), 3, client=client, traffic=_traffic())
     assert result["generation"]["mode"] == "deterministic_fallback"
     assert result["forecast"]["predicted_pm25"] == 72.0
@@ -92,7 +92,7 @@ def test_explanation_falls_back_safely_without_groq_key() -> None:
     assert "khẩu trang" not in actions
 
 
-def test_valid_grounded_groq_json_is_used() -> None:
+def test_valid_grounded_dashscope_json_is_used() -> None:
     generated = {
         "headline": "PM2.5 +3 giờ: 72.0 µg/m³",
         "summary": "Mô hình dự báo PM2.5 tăng từ 56.6 lên 72.0 µg/m³ sau 3 giờ.",
@@ -107,8 +107,9 @@ def test_valid_grounded_groq_json_is_used() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.headers["Authorization"] == "Bearer test-key"
         body = json.loads(request.content)
-        assert body["model"] == "openai/gpt-oss-120b"
-        assert body["max_completion_tokens"] == 1400
+        assert body["model"] == "deepseek-v4-flash"
+        assert body["max_tokens"] == 1400
+        assert body["enable_thinking"] is False
         assert body["response_format"] == {"type": "json_object"}
         assert "knowledge_graph" in body["messages"][1]["content"]
         assert "unverified_emission_sources" in body["messages"][1]["content"]
@@ -117,20 +118,102 @@ def test_valid_grounded_groq_json_is_used() -> None:
             json={"choices": [{"message": {"content": json.dumps(generated, ensure_ascii=False)}}]},
         )
 
-    client = GroqClient(
-        GroqConfig(api_key="test-key"),
+    client = DashScopeClient(
+        DashScopeConfig(api_key="test-key"),
         http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     )
     result = explain_forecast(_prediction(), 3, client=client)
     assert result["generation"] == {
-        "mode": "groq",
-        "provider_model": "openai/gpt-oss-120b",
+        "mode": "dashscope",
+        "provider_model": "deepseek-v4-flash",
         "fallback_reason": None,
     }
     assert result["explanation"]["headline"] == generated["headline"]
 
 
-def test_unsupported_groq_claim_or_number_triggers_fallback() -> None:
+def test_guardrail_retries_once_with_a_repair_prompt() -> None:
+    invalid = {
+        "headline": "PM2.5 forecast",
+        "summary": "Unsupported measurement: 999.",
+        "contributing_conditions": ["Observed conditions require verification."],
+        "sensitive_group_advice": "Sensitive groups should monitor updates.",
+        "recommended_actions": ["Continue monitoring observations."],
+        "uncertainty": "This is an hourly screening forecast.",
+    }
+    valid = {
+        "headline": "PM2.5 forecast",
+        "summary": "The forecast changes from 56.6 to 72.0 after 3 hours.",
+        "contributing_conditions": ["Observed conditions may contribute."],
+        "sensitive_group_advice": "Sensitive groups should monitor updates.",
+        "recommended_actions": ["Continue monitoring observations."],
+        "uncertainty": "This is an hourly screening forecast.",
+    }
+    calls: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(json.loads(request.content))
+        payload = invalid if len(calls) == 1 else valid
+        return httpx.Response(
+            200,
+            json={
+                "choices": [
+                    {"message": {"content": json.dumps(payload, ensure_ascii=False)}}
+                ]
+            },
+        )
+
+    client = DashScopeClient(
+        DashScopeConfig(api_key="test-key"),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    result = explain_forecast(_prediction(), 3, client=client)
+
+    assert len(calls) == 2
+    assert result["generation"]["mode"] == "dashscope"
+    assert result["explanation"]["summary"] == valid["summary"]
+
+
+def test_dashscope_may_use_one_decimal_rounding_of_grounded_values() -> None:
+    prediction = _prediction()
+    prediction["forecast_pm25"]["3h"] = 72.04
+    generated = {
+        "headline": "PM2.5 forecast: 72.0",
+        "summary": "The forecast changes from 56.6 to 72.0 after 3 hours.",
+        "contributing_conditions": ["Observed conditions may contribute."],
+        "sensitive_group_advice": "Sensitive groups should monitor updates.",
+        "recommended_actions": ["Continue monitoring observations."],
+        "uncertainty": "This is an hourly screening forecast.",
+    }
+    client = DashScopeClient(
+        DashScopeConfig(api_key="test-key"),
+        http_client=httpx.Client(
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200,
+                    json={
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": json.dumps(
+                                        generated,
+                                        ensure_ascii=False,
+                                    )
+                                }
+                            }
+                        ]
+                    },
+                )
+            )
+        ),
+    )
+
+    result = explain_forecast(prediction, 3, client=client)
+
+    assert result["generation"]["mode"] == "dashscope"
+    assert result["explanation"]["headline"] == generated["headline"]
+
+
+def test_unsupported_dashscope_claim_or_number_triggers_fallback() -> None:
     generated = {
         "headline": "Dự báo PM2.5",
         "summary": "Nguyên nhân chính là nhà máy gây ô nhiễm 999 µg/m³.",
@@ -145,8 +228,8 @@ def test_unsupported_groq_claim_or_number_triggers_fallback() -> None:
             json={"choices": [{"message": {"content": json.dumps(generated, ensure_ascii=False)}}]},
         )
     )
-    client = GroqClient(
-        GroqConfig(api_key="test-key"),
+    client = DashScopeClient(
+        DashScopeConfig(api_key="test-key"),
         http_client=httpx.Client(transport=transport),
     )
     result = explain_forecast(_prediction(), 3, client=client)
@@ -164,8 +247,8 @@ def test_unverified_graph_source_mention_triggers_fallback() -> None:
         "recommended_actions": ["Theo dõi dữ liệu tiếp theo."],
         "uncertainty": "Đây là dự báo có sai số.",
     }
-    client = GroqClient(
-        GroqConfig(api_key="test-key"),
+    client = DashScopeClient(
+        DashScopeConfig(api_key="test-key"),
         http_client=httpx.Client(
             transport=httpx.MockTransport(
                 lambda request: httpx.Response(

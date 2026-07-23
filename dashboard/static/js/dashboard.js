@@ -560,8 +560,8 @@ function renderForecastExplanation(payload) {
 
   const header = document.createElement("div"); header.className = "genai-result-heading";
   const title = document.createElement("h3"); title.textContent = explanation.headline || "Giải thích dự báo";
-  const mode = document.createElement("span"); mode.className = `generation-mode ${generation.mode === "groq" ? "live" : "fallback"}`;
-  mode.textContent = generation.mode === "groq" ? `Groq · ${generation.provider_model || "GenAI"}` : "Giải thích kiểm soát · dự phòng";
+  const mode = document.createElement("span"); mode.className = `generation-mode ${generation.mode === "dashscope" ? "live" : "fallback"}`;
+  mode.textContent = generation.mode === "dashscope" ? `DashScope · ${generation.provider_model || "DeepSeek"}` : "Giải thích kiểm soát · dự phòng";
   header.append(title, mode);
 
   const summary = document.createElement("p"); summary.className = "genai-summary"; summary.textContent = explanation.summary || "Không có nội dung giải thích.";
