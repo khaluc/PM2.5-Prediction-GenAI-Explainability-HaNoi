@@ -15,6 +15,7 @@ const state = {
   explanationCache: new Map(),
   explanationInFlightKey: null,
   explanationRequestId: 0,
+  explanationRetryTimer: null,
 };
 
 const byId = (id) => document.getElementById(id);
@@ -472,6 +473,31 @@ function forecastExplanationKey(stationId = state.stationId, snapshot = state.sn
   return JSON.stringify([stationId, timestamp, Number(forecast)]);
 }
 
+function clearForecastExplanationRetry() {
+  if (state.explanationRetryTimer) {
+    window.clearTimeout(state.explanationRetryTimer);
+    state.explanationRetryTimer = null;
+  }
+}
+
+function scheduleForecastExplanationRetry(key, payload) {
+  clearForecastExplanationRetry();
+  const generationMode = payload?.result?.generation?.mode;
+  const expiresAt = new Date(payload?.cache?.expires_at || "");
+  if (
+    generationMode === "dashscope"
+    || Number.isNaN(expiresAt.getTime())
+  ) return;
+
+  const delay = Math.max(1_000, expiresAt.getTime() - Date.now() + 1_000);
+  state.explanationRetryTimer = window.setTimeout(() => {
+    state.explanationRetryTimer = null;
+    if (key !== forecastExplanationKey()) return;
+    state.explanationCache.delete(key);
+    void generateForecastExplanation();
+  }, delay);
+}
+
 function setForecastExplanationLoading() {
   const container = byId("genai-output");
   container.className = "genai-output loading";
@@ -682,6 +708,7 @@ async function selectStation(stationId, options = {}) {
     state.snapshot = null;
     state.explanationRequestId += 1;
     state.explanationInFlightKey = null;
+    clearForecastExplanationRetry();
     resetForecastExplanation("Đang tải dữ liệu khu vực để giải thích dự báo +1 giờ…");
   }
   updateMapSelection(Boolean(options.moveMap));
@@ -731,7 +758,9 @@ async function generateForecastExplanation() {
     return;
   }
   if (state.explanationCache.has(key)) {
-    renderForecastExplanation(state.explanationCache.get(key));
+    const cachedPayload = state.explanationCache.get(key);
+    renderForecastExplanation(cachedPayload);
+    scheduleForecastExplanationRetry(key, cachedPayload);
     return;
   }
   if (state.explanationInFlightKey === key) return;
@@ -753,6 +782,7 @@ async function generateForecastExplanation() {
     if (state.explanationCache.size > 24) {
       state.explanationCache.delete(state.explanationCache.keys().next().value);
     }
+    scheduleForecastExplanationRetry(key, payload);
     renderForecastExplanation(payload);
   } catch (error) {
     if (

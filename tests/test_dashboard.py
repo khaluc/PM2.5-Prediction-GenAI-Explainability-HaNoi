@@ -278,6 +278,9 @@ def test_dashboard_forecast_explanation_validates_and_proxies() -> None:
     assert client.post(
         "/api/forecast-explanation", json={"station_id": "ST_A", "horizon_hours": 3}
     ).status_code == 400
+    script = client.get("/static/js/dashboard.js").get_data(as_text=True)
+    assert "scheduleForecastExplanationRetry(key, payload)" in script
+    assert "state.explanationCache.delete(key)" in script
 
 
 def test_dashboard_knowledge_graph_proxy_validates_relation() -> None:

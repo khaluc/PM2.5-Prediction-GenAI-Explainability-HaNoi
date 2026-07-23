@@ -53,7 +53,8 @@ Thinking phải tắt vì DashScope không cho dùng `enable_thinking=true` cùn
 Nếu chưa cấu hình key hoặc DashScope trả dữ liệu không qua guardrail, API vẫn trả bản giải
 thích xác định sẵn và ghi `generation.mode=deterministic_fallback`. Giải thích +1 giờ
 được lưu trong PostgreSQL theo trạm và thời điểm phát hành dự báo: kết quả DeepSeek
-được dùng lại trong 2 giờ, còn bản dự phòng chỉ giữ 5 phút trước khi tự thử DeepSeek lại.
+được dùng lại trong 2 giờ, còn bản dự phòng chỉ giữ 5 phút trước khi dashboard tự
+thử DeepSeek lại, kể cả khi người dùng vẫn giữ nguyên trang.
 
 ## Thu thập dữ liệu live
 
