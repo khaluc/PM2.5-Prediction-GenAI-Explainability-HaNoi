@@ -50,8 +50,8 @@ class FakeEnvironmentApi:
             return {
                 "status": "ok",
                 "result": {
-                    "forecast": {"model": "LightGBM", "horizon_hours": 3, "predicted_pm25": 45},
-                    "explanation": {"headline": "PM2.5 +3 giờ"},
+                    "forecast": {"model": "LightGBM", "horizon_hours": 1, "predicted_pm25": 42},
+                    "explanation": {"headline": "PM2.5 +1 giờ"},
                     "generation": {"mode": "deterministic_fallback"},
                 },
             }
@@ -134,6 +134,12 @@ def test_dashboard_page_has_required_sections() -> None:
     assert "function renderKnowledgeGraph" in script
     assert "Knowledge Graph PM2.5" in html
     assert 'href="/knowledge-graph"' in html
+    assert "+1 giờ · Tự động" in html
+    assert 'id="explanation-horizon"' not in html
+    assert 'id="explain-button"' not in html
+    assert "horizon_hours: 1" in script
+    assert "void generateForecastExplanation();" in script
+    assert "explanationCache" in script
 
 
 def test_dashboard_snapshot_aggregates_backend_calls() -> None:
@@ -262,15 +268,15 @@ def test_dashboard_forecast_explanation_validates_and_proxies() -> None:
     client = create_app(api_client=fake, testing=True).test_client()
     response = client.post(
         "/api/forecast-explanation",
-        json={"station_id": "ST_A", "horizon_hours": 3, "use_llm": True},
+        json={"station_id": "ST_A", "horizon_hours": 1, "use_llm": True},
     )
     assert response.status_code == 200
-    assert response.get_json()["result"]["forecast"]["predicted_pm25"] == 45
+    assert response.get_json()["result"]["forecast"]["predicted_pm25"] == 42
     call = fake.calls[-1]
     assert call["path"] == "/forecast-explanation"
-    assert call["json"] == {"station_id": "ST_A", "horizon_hours": 3, "use_llm": True}
+    assert call["json"] == {"station_id": "ST_A", "horizon_hours": 1, "use_llm": True}
     assert client.post(
-        "/api/forecast-explanation", json={"station_id": "ST_A", "horizon_hours": 2}
+        "/api/forecast-explanation", json={"station_id": "ST_A", "horizon_hours": 3}
     ).status_code == 400
 
 

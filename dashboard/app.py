@@ -195,10 +195,10 @@ def create_app(*, api_client: DashboardApiClient | Any | None = None, testing: b
         if not _valid_station_id(station_id):
             return jsonify({"error": "invalid_station_id"}), 400
         try:
-            horizon_hours = int(payload.get("horizon_hours", 3))
+            horizon_hours = int(payload.get("horizon_hours", 1))
         except (TypeError, ValueError):
             return jsonify({"error": "invalid_horizon_hours"}), 400
-        if horizon_hours not in {1, 3, 6}:
+        if horizon_hours != 1:
             return jsonify({"error": "invalid_horizon_hours"}), 400
         backend_payload = {
             "station_id": station_id,

@@ -12,6 +12,9 @@ const state = {
   hourlyPollTimer: null,
   hourlyFallbackTimer: null,
   hourlyRefreshInFlight: false,
+  explanationCache: new Map(),
+  explanationInFlightKey: null,
+  explanationRequestId: 0,
 };
 
 const byId = (id) => document.getElementById(id);
@@ -454,11 +457,26 @@ function renderAlerts(payload) {
   });
 }
 
-function resetForecastExplanation() {
+function resetForecastExplanation(messageText = "Đang chờ dự báo ML +1 giờ để tạo nhận định tự động…") {
   const container = byId("genai-output");
   container.className = "genai-output empty";
   const message = document.createElement("p");
-  message.textContent = "Chọn mốc thời gian rồi nhấn “Giải thích” để tạo nhận định có kiểm soát.";
+  message.textContent = messageText;
+  container.replaceChildren(message);
+}
+
+function forecastExplanationKey(stationId = state.stationId, snapshot = state.snapshot) {
+  const forecast = snapshot?.prediction?.forecast_pm25?.["1h"];
+  if (!stationId || !Number.isFinite(Number(forecast))) return null;
+  const timestamp = snapshot?.prediction?.timestamp || snapshot?.latest?.timestamp || "";
+  return JSON.stringify([stationId, timestamp, Number(forecast)]);
+}
+
+function setForecastExplanationLoading() {
+  const container = byId("genai-output");
+  container.className = "genai-output loading";
+  const message = document.createElement("p");
+  message.textContent = "Đang tự động giải thích dự báo ML +1 giờ…";
   container.replaceChildren(message);
 }
 
@@ -654,17 +672,25 @@ function renderSnapshot(snapshot) {
     setText("anomaly-detail", anomaly.reason || `Nguồn phát hiện: ${anomaly.detection_source || "none"}`);
   }
   renderAlerts(snapshot.alerts);
-  resetForecastExplanation();
   updateMapSelection(false);
 }
 
 async function selectStation(stationId, options = {}) {
+  const stationChanged = state.stationId !== stationId;
   state.stationId = stationId;
+  if (stationChanged) {
+    state.snapshot = null;
+    state.explanationRequestId += 1;
+    state.explanationInFlightKey = null;
+    resetForecastExplanation("Đang tải dữ liệu khu vực để giải thích dự báo +1 giờ…");
+  }
   updateMapSelection(Boolean(options.moveMap));
   setLoading(true);
   try {
     const snapshot = await apiFetch(`/api/stations/${encodeURIComponent(stationId)}/snapshot`);
+    if (state.stationId !== stationId) return;
     renderSnapshot(snapshot);
+    void generateForecastExplanation();
     setSystem("online", "Dữ liệu live");
   } catch (error) {
     setSystem("error", "Mất kết nối");
@@ -698,24 +724,49 @@ async function generateReport() {
 }
 
 async function generateForecastExplanation() {
-  if (!state.stationId) { toast("Chưa chọn khu vực để giải thích.", true); return; }
-  const horizon = Number(byId("explanation-horizon").value);
-  const forecast = state.snapshot?.prediction?.forecast_pm25?.[`${horizon}h`];
-  if (!Number.isFinite(Number(forecast))) { toast("Dự báo ML ở mốc này chưa khả dụng.", true); return; }
-  const button = byId("explain-button"), container = byId("genai-output");
-  button.disabled = true; button.textContent = "Đang giải thích…";
-  container.className = "genai-output loading";
-  const message = document.createElement("p"); message.textContent = "Đang tạo giải thích từ dữ liệu dự báo đã kiểm soát…"; container.replaceChildren(message);
+  const stationId = state.stationId;
+  const key = forecastExplanationKey(stationId, state.snapshot);
+  if (!key) {
+    resetForecastExplanation("Dự báo ML +1 giờ chưa khả dụng nên chưa thể tạo giải thích.");
+    return;
+  }
+  if (state.explanationCache.has(key)) {
+    renderForecastExplanation(state.explanationCache.get(key));
+    return;
+  }
+  if (state.explanationInFlightKey === key) return;
+
+  const requestId = state.explanationRequestId + 1;
+  state.explanationRequestId = requestId;
+  state.explanationInFlightKey = key;
+  setForecastExplanationLoading();
   try {
     const payload = await apiFetch("/api/forecast-explanation", {
       method: "POST",
-      body: JSON.stringify({ station_id: state.stationId, horizon_hours: horizon, use_llm: true }),
+      body: JSON.stringify({ station_id: stationId, horizon_hours: 1, use_llm: true }),
     });
+    if (
+      requestId !== state.explanationRequestId
+      || key !== forecastExplanationKey()
+    ) return;
+    state.explanationCache.set(key, payload);
+    if (state.explanationCache.size > 24) {
+      state.explanationCache.delete(state.explanationCache.keys().next().value);
+    }
     renderForecastExplanation(payload);
   } catch (error) {
-    resetForecastExplanation();
-    toast(`Không tạo được giải thích: ${error.message}`, true);
-  } finally { button.disabled = false; button.textContent = "Giải thích"; }
+    if (
+      requestId === state.explanationRequestId
+      && key === forecastExplanationKey()
+    ) {
+      resetForecastExplanation(
+        "Chưa thể tạo giải thích tự động. Hệ thống sẽ thử lại khi dữ liệu được làm mới.",
+      );
+      toast(`Không tạo được giải thích: ${error.message}`, true);
+    }
+  } finally {
+    if (state.explanationInFlightKey === key) state.explanationInFlightKey = null;
+  }
 }
 
 async function init() {
@@ -742,7 +793,6 @@ async function init() {
 byId("station-select").addEventListener("change", (event) => selectStation(event.target.value, { moveMap: true }));
 byId("refresh-button").addEventListener("click", () => state.stationId && selectStation(state.stationId));
 byId("report-button").addEventListener("click", generateReport);
-byId("explain-button").addEventListener("click", generateForecastExplanation);
 byId("report-close").addEventListener("click", () => byId("report-dialog").close());
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {

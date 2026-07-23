@@ -219,6 +219,7 @@ button, select { cursor: pointer; }
 
 .genai-card { margin-top: 18px; padding: 22px 24px; background: linear-gradient(135deg, #ffffff 0%, #f5fbfa 100%); }
 .genai-heading, .genai-title, .genai-controls, .genai-result-heading, .genai-result-footer { display: flex; align-items: center; }
+.genai-auto-label { flex: 0 0 auto; padding: 7px 10px; border: 1px solid #cce4df; border-radius: 999px; color: var(--brand-dark); background: #edf8f5; font-size: 9px; font-weight: 850; letter-spacing: .03em; }
 .genai-heading { justify-content: space-between; gap: 18px; }
 .genai-title { gap: 11px; }
 .genai-title h2 { margin: 4px 0 0; font-size: 18px; letter-spacing: -.025em; }
