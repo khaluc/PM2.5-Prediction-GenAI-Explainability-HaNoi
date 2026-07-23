@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from api.dependencies import (
     get_alert_store,
+    get_explanation_cache,
     get_hourly_update_service,
     get_monitoring_repository,
     get_news_crawler,
@@ -17,6 +18,7 @@ from api.dependencies import (
 )
 from api.main import app
 from src.alerts.alert_service import FileAlertStore
+from src.genai.explanation_cache import ForecastExplanationCache
 from src.services.monitoring_repository import MONITORING_COLUMNS, MonitoringRepository
 
 
@@ -173,6 +175,8 @@ def api_client(tmp_path: Path):
     app.dependency_overrides[get_traffic_repository] = lambda: FakeTrafficRepository()
     app.dependency_overrides[get_news_crawler] = lambda: FakeNewsCrawler()
     app.dependency_overrides[get_hourly_update_service] = lambda: FakeHourlyUpdateService()
+    explanation_cache = ForecastExplanationCache(database_enabled=False)
+    app.dependency_overrides[get_explanation_cache] = lambda: explanation_cache
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
@@ -343,9 +347,56 @@ def test_forecast_explanation_uses_latest_ml_prediction(
     assert response.status_code == 200
     assert response.json()["result"]["forecast"]["predicted_pm25"] == 72.0
     assert response.json()["result"]["grounding"]["traffic"]["source"] == "tomtom_flow_segment"
+    assert response.json()["cache"]["status"] == "bypass"
+    assert response.json()["result"]["generation"]["cache_status"] == "bypass"
     assert api_client.post(
         "/forecast-explanation", json={"station_id": "ST_A", "horizon_hours": 2}
     ).status_code == 422
+
+
+def test_forecast_explanation_reuses_one_hour_result(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+    monkeypatch.setattr(
+        "api.routes.explanations.build_latest_feature_row",
+        lambda frame: {"station_id": "ST_A", "pm25": 60.0},
+    )
+    monkeypatch.setattr(
+        "api.routes.explanations.predict_from_features",
+        lambda features: {
+            "station_id": "ST_A",
+            "timestamp": "2026-07-23T10:00:00+07:00",
+            "forecast_pm25": {"1h": 61.0},
+        },
+    )
+
+    def explain(prediction, horizon_hours, use_llm, traffic):
+        nonlocal calls
+        calls += 1
+        return {
+            "station_id": prediction["station_id"],
+            "forecast": {
+                "horizon_hours": horizon_hours,
+                "predicted_pm25": 61.0,
+            },
+            "generation": {
+                "mode": "dashscope",
+                "provider_model": "dashscope:deepseek-v4-flash",
+                "fallback_reason": None,
+            },
+        }
+
+    monkeypatch.setattr("api.routes.explanations.explain_forecast", explain)
+    payload = {"station_id": "ST_A", "horizon_hours": 1, "use_llm": True}
+    first = api_client.post("/forecast-explanation", json=payload)
+    second = api_client.post("/forecast-explanation", json=payload)
+
+    assert first.status_code == second.status_code == 200
+    assert calls == 1
+    assert first.json()["cache"]["status"] == "miss"
+    assert second.json()["cache"]["status"] == "hit"
+    assert second.json()["result"]["generation"]["mode"] == "dashscope"
 
 
 def test_alert_create_deduplicate_and_acknowledge(api_client: TestClient) -> None:

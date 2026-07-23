@@ -13,6 +13,7 @@ from src.database.alert_store import DatabaseAlertStore
 from src.database.connection import environment_flag, get_database_url
 from src.database.monitoring_repository import DatabaseMonitoringRepository
 from src.database.writer import DatabaseWriter
+from src.genai.explanation_cache import ForecastExplanationCache
 from src.services.monitoring_repository import (
     DEFAULT_FEATURE_PATH,
     DEFAULT_LIVE_AIR_PATH,
@@ -68,6 +69,29 @@ def get_traffic_repository() -> TrafficRepository:
     return TrafficRepository(
         os.getenv("LIVE_TRAFFIC_DATA_PATH", str(DEFAULT_TRAFFIC_PATH)),
         max_age_minutes=float(os.getenv("TRAFFIC_MAX_AGE_MINUTES", "120")),
+    )
+
+
+@lru_cache(maxsize=1)
+def get_explanation_cache() -> ForecastExplanationCache:
+    database_enabled = (
+        environment_flag("DATABASE_READ_ENABLED", False)
+        and environment_flag("DATABASE_WRITE_ENABLED", False)
+        and "PYTEST_CURRENT_TEST" not in os.environ
+    )
+    return ForecastExplanationCache(
+        get_database_url(),
+        database_enabled=database_enabled,
+        success_ttl_seconds=int(
+            os.getenv("GENAI_SUCCESS_CACHE_TTL_SECONDS", "7200")
+        ),
+        fallback_ttl_seconds=int(
+            os.getenv("GENAI_FALLBACK_CACHE_TTL_SECONDS", "300")
+        ),
+        cache_version=os.getenv(
+            "GENAI_EXPLANATION_CACHE_VERSION",
+            "hourly-explanation-v1",
+        ),
     )
 
 

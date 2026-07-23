@@ -44,11 +44,16 @@ DASHSCOPE_API_KEY=...
 DASHSCOPE_MODEL=deepseek-v4-flash
 DASHSCOPE_BASE_URL=https://dashscope-intl.aliyuncs.com/compatible-mode/v1
 DASHSCOPE_THINKING_ENABLED=false
+GENAI_SUCCESS_CACHE_TTL_SECONDS=7200
+GENAI_FALLBACK_CACHE_TTL_SECONDS=300
+GENAI_EXPLANATION_CACHE_VERSION=hourly-explanation-v1
 ```
 
 Thinking phải tắt vì DashScope không cho dùng `enable_thinking=true` cùng JSON mode.
 Nếu chưa cấu hình key hoặc DashScope trả dữ liệu không qua guardrail, API vẫn trả bản giải
-thích xác định sẵn và ghi `generation.mode=deterministic_fallback`.
+thích xác định sẵn và ghi `generation.mode=deterministic_fallback`. Giải thích +1 giờ
+được lưu trong PostgreSQL theo trạm và thời điểm phát hành dự báo: kết quả DeepSeek
+được dùng lại trong 2 giờ, còn bản dự phòng chỉ giữ 5 phút trước khi tự thử DeepSeek lại.
 
 ## Thu thập dữ liệu live
 
@@ -162,7 +167,7 @@ OpenAPI: `http://127.0.0.1:8000/docs`
 | GET | `/stations/{station_id}/history` | Lịch sử có phân trang |
 | POST | `/predict` | Dự báo LightGBM +1h/+3h/+6h |
 | POST | `/detect-anomaly` | Luật ngưỡng và Isolation Forest |
-| POST | `/forecast-explanation` | Giải thích có kiểm soát cho dự báo +1h/+3h/+6h |
+| POST | `/forecast-explanation` | Giải thích có kiểm soát; dashboard tự dùng mốc +1h |
 | GET | `/knowledge-graph/pm25` | Knowledge Graph không khí đô thị; lọc theo `EMITS`, `INFLUENCED_BY`, `MITIGATED_BY` |
 | GET | `/alerts` | Danh sách cảnh báo |
 | POST | `/alerts/evaluate` | Đánh giá và tạo cảnh báo |
@@ -191,13 +196,14 @@ Ví dụ giải thích dự báo:
 ```powershell
 Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8000/forecast-explanation `
   -ContentType application/json `
-  -Body '{"station_id":"HN_HA_DONG","horizon_hours":3,"use_llm":true}'
+  -Body '{"station_id":"HN_HA_DONG","horizon_hours":1,"use_llm":true}'
 ```
 
 GenAI chỉ diễn đạt dữ kiện có trong kết quả ML, thời tiết hiện tại và phân tích giả
 thuyết đã được hệ thống hỗ trợ. Các cụm như gió yếu, độ ẩm cao và ít mưa được trình
 bày là điều kiện *có thể góp phần*, không phải kết luận nhân quả. PM2.5 theo giờ chỉ
-là mức sàng lọc, không được gọi là AQI chính thức.
+là mức sàng lọc, không được gọi là AQI chính thức. Trường `cache.status` cho biết
+`miss` (vừa tạo), `hit` (đọc bản ổn định) hoặc `refresh` (bản cũ hết hạn và vừa tạo lại).
 
 ## Knowledge Graph không khí đô thị
 
@@ -232,7 +238,7 @@ Mở `http://127.0.0.1:8501`. Dashboard gồm:
 - Biểu đồ PM2.5 trong 24 giờ gần nhất.
 - Bản đồ Leaflet toàn Hà Nội với 8 điểm lấy mẫu.
 - Trạng thái bất thường và danh sách cảnh báo.
-- Thẻ GenAI giải thích dự báo tại mốc +1h, +3h hoặc +6h.
+- Thẻ GenAI tự giải thích dự báo +1h ngay khi tải dữ liệu, không cần bấm nút.
 - Trang `/knowledge-graph` hiển thị đồ thị không khí đô thị tương tác: kéo node,
   zoom/pan, tìm kiếm, lọc `EMITS`/`INFLUENCED_BY`/`MITIGATED_BY` và xem nguồn của từng cạnh.
 - Nút tạo và tải báo cáo PDF 24 giờ, có biểu đồ PM2.5, khí tượng, chất lượng và nguồn dữ liệu.

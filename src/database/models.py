@@ -216,6 +216,48 @@ class Forecast(Base):
     )
 
 
+class GenAIExplanation(Base):
+    __tablename__ = "genai_explanations"
+
+    id: Mapped[int] = mapped_column(BIGINT_PK, primary_key=True, autoincrement=True)
+    station_id: Mapped[str] = mapped_column(
+        ForeignKey("stations.station_id", ondelete="CASCADE"), nullable=False
+    )
+    forecast_issued_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    horizon_hours: Mapped[int] = mapped_column(Integer, nullable=False)
+    cache_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    generation_mode: Mapped[str] = mapped_column(String(40), nullable=False)
+    provider_model: Mapped[str | None] = mapped_column(String(120))
+    fallback_reason: Mapped[str | None] = mapped_column(String(160))
+    result: Mapped[dict[str, Any]] = mapped_column(JSON_VALUE, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "station_id",
+            "forecast_issued_at",
+            "horizon_hours",
+            "cache_version",
+            name="genai_station_issue_horizon_version",
+        ),
+        CheckConstraint("horizon_hours > 0", name="genai_horizon_positive"),
+        Index(
+            "ix_genai_station_issued_desc",
+            "station_id",
+            forecast_issued_at.desc(),
+        ),
+        Index("ix_genai_expires_at", "expires_at"),
+    )
+
+
 class AnomalyEvent(Base):
     __tablename__ = "anomaly_events"
 
